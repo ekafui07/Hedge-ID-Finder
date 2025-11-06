@@ -40,39 +40,3 @@ Compare: Click the "Compare Files" button.
 
 Review & Download: The results will appear in the table. Click the "Download Results" button to save them as an Excel file.
 
-How to Host (on GitHub Pages)
-
-Since you're familiar with GitHub Pages, here's the quick process:
-
-Create a Repository: Create a new public repository on GitHub (e.g., name-matcher).
-
-Rename File: Rename the excel-sorter.html file to index.html. This is important so GitHub Pages serves it as the default page.
-
-Push the File: Add and commit the index.html file to your new repository and push it.
-
-git init
-git add index.html
-git commit -m "Initial commit"
-git remote add origin [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git)
-git push -u origin main
-
-
-Enable Pages:
-
-Go to your repository's Settings tab.
-
-Navigate to the Pages section on the left.
-
-Under Source, select your main branch (or master) and save.
-
-Done: Your tool will be live in a few minutes at https://YOUR_USERNAME.github.io/YOUR_REPOSITORY/.
-
-Libraries Used
-
-This tool is made possible by these excellent open-source libraries:
-
-Tailwind CSS - For styling the UI.
-
-SheetJS (xlsx.js) - For reading and writing Excel files in the browser.
-
-Fuse.js - For the powerful fuzzy matching.
