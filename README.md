@@ -1,10 +1,10 @@
-Hedge Pensions Trust Name & ID Matcher
+#Hedge Pensions Trust Name & ID Matcher
 
 This is a simple, no-backend, browser-based web tool to compare two Excel sheets. It's designed to find IDs from a "master" list for a "name" list, even when names are slightly misspelled.
 
 The tool is built as a single index.html file and runs entirely in your browser. No data ever leaves your computer.
 
-Core Features
+#Core Features
 
 Compares Two Lists: Takes a "Name List" (with names) and a "Master List" (with names and IDs).
 
@@ -18,9 +18,9 @@ Export to Excel: Download the final matched results as a new Excel (.xlsx) file.
 
 Client-Side Only: All processing is done in your browser. Files are never uploaded to a server, ensuring 100% privacy.
 
-How to Use
+#How to Use
 
-Open the Tool: Open the index.html file in any modern web browser (like Chrome, Firefox, or Edge).
+Open the Tool: https://ekafui07.github.io/Hedge-ID-Finder/ file in any modern web browser (like Chrome, Firefox, or Edge).
 
 Upload Files:
 
