@@ -3,498 +3,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hedge Pensions Name & ID Matcher</title>
-    <!-- Load Tailwind CSS -->
+    <title>Hedge Pensions Smart Matcher</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load SheetJS (xlsx) library for reading/writing Excel files -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Load Fuse.js for fuzzy matching -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        const originalWarn = console.warn;
+        console.warn = (...args) => {
+            if (args[0] && args[0].includes('cdn.tailwindcss.com')) return;
+            originalWarn.apply(console, args);
+        };
+    </script>
+
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .file-input-label {
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
+        body { font-family: 'Inter', sans-serif; }
+        .file-drop-area {
+            transition: all 0.2s ease;
             background-color: white;
         }
-        .file-input-label:hover {
-            background-color: #f3f4f6; /* gray-100 */
-        }
-        input[type="file"]:focus + label {
-            outline: 2px solid #3b82f6; /* blue-500 */
-            outline-offset: 2px;
-        }
-        .file-name-display {
-            margin-top: 0.5rem;
+        .file-drop-area:hover { background-color: #f9fafb; border-color: #3b82f6; }
+        .file-drop-area.loaded { border-color: #10b981; background-color: #ecfdf5; }
+        
+        select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
             font-size: 0.875rem;
-            font-weight: 500;
-            color: #4b5563; /* gray-600 */
+            background-color: white;
         }
-        .file-name-display.loaded {
-            color: #16a34a; /* green-600 */
-        }
-        /* Slider styles */
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: transparent;
-        }
-        input[type=range]:focus {
-            outline: none;
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 8px;
-            cursor: pointer;
-            background: #d1d5db; /* gray-300 */
-            border-radius: 5px;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 20px;
-            width: 20px;
-            border-radius: 50%;
-            background: #3b82f6; /* blue-600 */
-            cursor: pointer;
-            margin-top: -6px;
-        }
-        input[type=range]:focus::-webkit-slider-thumb {
-            background: #2563eb; /* blue-700 */
-        }
-        input[type=range]::-moz-range-track {
-            width: 100%;
-            height: 8px;
-            cursor: pointer;
-            background: #d1d5db;
-            border-radius: 5px;
-        }
-        input[type=range]::-moz-range-thumb {
-            height: 20px;
-            width: 20px;
-            border-radius: 50%;
-            background: #3b82f6;
-            cursor: pointer;
-            border: 0;
-        }
+        select:focus { outline: 2px solid #3b82f6; border-color: #3b82f6; }
     </style>
 </head>
-<body class="h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-100">
-    <div class="max-w-4xl w-full bg-white p-8 sm:p-10 rounded-xl shadow-lg space-y-8">
-        <div>
-            <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-                Hedge Pensions Name & ID Matcher
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                Upload a name list and a master list to find matching IDs, even with misspellings.
-            </p>
+<body class="h-full flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8 bg-slate-50">
+
+    <div class="max-w-6xl w-full space-y-6">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900">Hedge Pensions Data Matcher</h1>
+            <p class="mt-2 text-sm text-slate-600">Upload files &rarr; Map columns &rarr; Find IDs</p>
         </div>
-        
-        <div class="space-y-6">
-            <!-- File Upload Areas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- File 1: Name List -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">1. Name List</label>
-                    <input id="file-upload-names" name="file-upload-names" type="file" class="sr-only" accept=".xlsx, .xls" data-target="names">
-                    <label for="file-upload-names" class="file-input-label relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
-                        <svg class="mx-auto h-10 w-10 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A1.5 1.5 0 0 1 18 21.75H6a1.5 1.5 0 0 1-1.499-1.632Z" />
-                        </svg>
-                        <span class="mt-2 block text-xs text-gray-500">(First, Other, Last Name)</span>
-                    </label>
-                    <div id="file-name-names" class="file-name-display text-center">No file selected</div>
-                </div>
 
-                <!-- File 2: Master List -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">2. Master List (with IDs)</label>
-                    <input id="file-upload-master" name="file-upload-master" type="file" class="sr-only" accept=".xlsx, .xls" data-target="master">
-                    <label for="file-upload-master" class="file-input-label relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
-                        <svg class="mx-auto h-10 w-10 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                        </svg>
-                        <span class="mt-2 block text-xs text-gray-500">(First, Other, Last, ID)</span>
-                    </label>
-                    <div id="file-name-master" class="file-name-display text-center">No file selected</div>
-                </div>
-            </div>
-
-            <!-- Fuzziness Slider -->
-            <div>
-                <label for="fuzziness-slider" class="block text-sm font-medium text-gray-700">Match Sensitivity</label>
-                <div class="flex items-center space-x-4">
-                    <span class="text-xs text-gray-500">Exact (0)</span>
-                    <input id="fuzziness-slider" type="range" min="0" max="50" value="30" class="w-full">
-                    <span class="text-xs text-gray-500">Fuzzy (50)</span>
-                </div>
-                <div id="fuzziness-display" class="text-center text-sm text-gray-600 mt-1">Tolerance: 0.30</div>
-            </div>
-
-            <!-- Compare Button -->
-            <div>
-                <button id="compare-button" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    Compare Files
-                </button>
-            </div>
+        <div class="bg-white p-6 shadow rounded-xl border border-slate-200">
             
-            <!-- Message Area -->
-            <div id="message-area" class="text-sm text-center"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <div class="space-y-4">
+                    <h3 class="font-bold text-slate-700 border-b pb-2">1. Name List (Missing IDs)</h3>
+                    
+                    <div class="relative group">
+                        <input type="file" id="input-names" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <div id="drop-names" class="file-drop-area h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-center p-2">
+                            <span id="label-names" class="text-sm text-slate-500 font-medium">Click to upload Name List</span>
+                        </div>
+                    </div>
 
-        </div>
+                    <div id="map-names" class="hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                        <p class="text-xs font-bold text-slate-500 uppercase">Map Columns</p>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">First Name Column <span class="text-red-500">*</span></label>
+                            <select id="sel-n-first" onchange="validateForm()"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Other/Middle Name (Optional)</label>
+                            <select id="sel-n-other"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Last Name Column <span class="text-red-500">*</span></label>
+                            <select id="sel-n-last" onchange="validateForm()"></select>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Results Table -->
-        <div id="results-container" class="hidden">
-            <div class="flex justify-between items-center">
-                <h3 class="text-lg font-medium leading-6 text-gray-900">Matched Data</h3>
-                <button id="download-button" class="hidden justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    Download Results
-                </button>
+                <div class="space-y-4">
+                    <h3 class="font-bold text-slate-700 border-b pb-2">2. Master List (Has IDs)</h3>
+                    
+                    <div class="relative group">
+                        <input type="file" id="input-master" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <div id="drop-master" class="file-drop-area h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-center p-2">
+                            <span id="label-master" class="text-sm text-slate-500 font-medium">Click to upload Master List</span>
+                        </div>
+                    </div>
+
+                    <div id="map-master" class="hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                        <p class="text-xs font-bold text-slate-500 uppercase">Map Columns</p>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">ID Column <span class="text-red-500">*</span></label>
+                            <select id="sel-m-id" onchange="validateForm()"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">First Name Column <span class="text-red-500">*</span></label>
+                            <select id="sel-m-first" onchange="validateForm()"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Other/Middle Name (Optional)</label>
+                            <select id="sel-m-other"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Last Name Column <span class="text-red-500">*</span></label>
+                            <select id="sel-m-last" onchange="validateForm()"></select>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mt-4 overflow-auto rounded-lg shadow" style="max-height: 400px;">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Name (List)</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Other (List)</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Name (List)</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Found ID</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matched Name (Master)</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Match %</th>
-                        </tr>
-                    </thead>
-                    <tbody id="results-table-body" class="bg-white divide-y divide-gray-200">
-                        <!-- Rows will be inserted here by JavaScript -->
-                    </tbody>
-                </table>
+
+            <div class="mt-8 pt-6 border-t border-slate-200">
+                <div class="flex flex-col sm:flex-row items-center gap-6">
+                    <div class="w-full sm:w-1/2">
+                        <label class="text-sm font-medium text-slate-700 flex justify-between">
+                            <span>Match Sensitivity</span>
+                            <span id="threshold-val" class="text-xs bg-blue-100 text-blue-800 px-2 rounded">Balanced</span>
+                        </label>
+                        <input type="range" id="threshold" min="0" max="60" value="30" class="w-full mt-2 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <button id="btn-process" disabled class="w-full sm:w-auto bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all">
+                        Run Comparison
+                    </button>
+                </div>
+                <p id="validation-msg" class="text-center text-xs text-red-500 mt-2 font-medium">Please upload files and select required columns (*)</p>
             </div>
+
+            <div id="results-area" class="hidden mt-8 border-t pt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-800" id="result-count">Results</h3>
+                    <button id="btn-download" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Excel
+                    </button>
+                </div>
+                
+                <div class="overflow-auto border rounded-lg max-h-[400px]">
+                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead class="bg-slate-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Name List Name</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Found ID</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Master List Name</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="bg-white divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <script>
-        const fileUploadNames = document.getElementById('file-upload-names');
-        const fileUploadMaster = document.getElementById('file-upload-master');
-        const fileNameNames = document.getElementById('file-name-names');
-        const fileNameMaster = document.getElementById('file-name-master');
-        const compareButton = document.getElementById('compare-button');
-        const downloadButton = document.getElementById('download-button');
-        const messageArea = document.getElementById('message-area');
-        const resultsContainer = document.getElementById('results-container');
-        const resultsTableBody = document.getElementById('results-table-body');
-        const fuzzinessSlider = document.getElementById('fuzziness-slider');
-        const fuzzinessDisplay = document.getElementById('fuzziness-display');
+<script>
+    // --- Data Store ---
+    let nameData = [];
+    let masterData = [];
+    let processedData = [];
 
-        let nameListData = null;
-        let masterListData = null;
-        let nameListHeaders = [];
-        let masterListHeaders = [];
-        let lastResultsData = []; // To store data for download
+    // --- DOM Refs ---
+    const btnProcess = document.getElementById('btn-process');
+    const btnDownload = document.getElementById('btn-download');
+    const thresholdSlider = document.getElementById('threshold');
+    const validationMsg = document.getElementById('validation-msg');
 
-        fileUploadNames.addEventListener('change', (e) => handleFile(e, 'names'));
-        fileUploadMaster.addEventListener('change', (e) => handleFile(e, 'master'));
-        compareButton.addEventListener('click', processComparison);
-        downloadButton.addEventListener('click', downloadResults);
-        fuzzinessSlider.addEventListener('input', (e) => {
-            fuzzinessDisplay.textContent = `Tolerance: 0.${e.target.value.padStart(2, '0')}`;
-        });
+    // --- Event Listeners ---
+    document.getElementById('input-names').addEventListener('change', (e) => handleUpload(e, 'names'));
+    document.getElementById('input-master').addEventListener('change', (e) => handleUpload(e, 'master'));
+    btnProcess.addEventListener('click', runMatcher);
+    btnDownload.addEventListener('click', downloadExcel);
 
-        // Helper function to correctly set file data
-        function setFileStore(key, value) {
-            if (key === 'nameListData') {
-                nameListData = value;
-            } else if (key === 'masterListData') {
-                masterListData = value;
-            } else if (key === 'nameListHeaders') {
-                nameListHeaders = value;
-            } else if (key === 'masterListHeaders') {
-                masterListHeaders = value;
-            }
-        }
+    thresholdSlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        const label = document.getElementById('threshold-val');
+        if(val == 0) label.textContent = "Exact Match Only";
+        else if(val < 25) label.textContent = "Strict";
+        else if(val < 45) label.textContent = "Balanced";
+        else label.textContent = "Loose";
+    });
 
-        function handleFile(event, fileType) {
-            const file = event.target.files[0];
-            // Fix: Changed ( ) to [ ] for array destructuring
-            const [fileNameDisplay, dataStoreKey, headersStoreKey] = fileType === 'names'
-                ? [fileNameNames, 'nameListData', 'nameListHeaders']
-                : [fileNameMaster, 'masterListData', 'masterListHeaders'];
+    // --- Functions ---
 
-            if (!file) {
-                fileNameDisplay.textContent = 'No file selected';
-                fileNameDisplay.classList.remove('loaded');
-                setFileStore(dataStoreKey, null); // Use helper
-                checkFilesLoaded();
-                return;
-            }
+    function handleUpload(e, type) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-            fileNameDisplay.textContent = `Loading ${file.name}...`;
-            fileNameDisplay.classList.remove('loaded');
-            // Hide previous results when a new file is loaded
-            resultsContainer.classList.add('hidden');
-            downloadButton.classList.add('hidden');
-            lastResultsData = [];
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {defval: ""}); // Use defval to ensure empty cells are treated as empty strings
-
-                    if (jsonData.length === 0) {
-                        showMessage('error', `${file.name} is empty.`);
-                        fileNameDisplay.textContent = 'File is empty';
-                        fileNameDisplay.classList.remove('loaded');
-                        setFileStore(dataStoreKey, null); // Use helper
-                    } else {
-                        setFileStore(dataStoreKey, jsonData); // Use helper
-                        setFileStore(headersStoreKey, Object.keys(jsonData[0])); // Use helper
-                        fileNameDisplay.textContent = `${file.name} loaded`;
-                        fileNameDisplay.classList.add('loaded');
-                        showMessage('info', `${file.name} successfully loaded.`);
-                    }
-                } catch (error) {
-                    console.error('File processing error:', error);
-                    showMessage('error', `Error processing ${file.name}.`);
-                    fileNameDisplay.textContent = 'Error loading file';
-                    fileNameDisplay.classList.remove('loaded');
-                    setFileStore(dataStoreKey, null); // Use helper
-                }
-                checkFilesLoaded();
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function checkFilesLoaded() {
-            if (nameListData && masterListData) {
-                compareButton.disabled = false;
-            } else {
-                compareButton.disabled = true;
-            }
-        }
-
-        /**
-         * Finds the first key in an array of keys that includes a target string.
-         * Case-insensitive.
-         */
-        function findKey(keys, target) {
-            const lowerTarget = target.toLowerCase();
-            // Prioritize exact match or common variations
-            const aliases = {
-                'first': ['first name', 'fname', 'given name', 'first'],
-                'last': ['last name', 'lname', 'surname', 'last'],
-                'other': ['other name', 'middle name', 'mname', 'other'],
-                'id': ['id', 'employee id', 'student id', 'number']
-            };
-
-            const targetAliases = aliases[lowerTarget] || [lowerTarget];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.SheetNames[0];
+            const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {defval:""});
             
-            for (const alias of targetAliases) {
-                const foundKey = keys.find(key => key.toLowerCase().replace(/[^a-z0-9]/g, '') === alias.replace(/[^a-z0-9]/g, ''));
-                if (foundKey) return foundKey;
+            if(json.length === 0) { alert("File is empty!"); return; }
+
+            const headers = Object.keys(json[0]);
+
+            if (type === 'names') {
+                nameData = json;
+                document.getElementById('drop-names').classList.add('loaded');
+                document.getElementById('label-names').textContent = file.name;
+                document.getElementById('label-names').className = "text-green-700 font-bold";
+                document.getElementById('map-names').classList.remove('hidden');
+                
+                // Populate Dropdowns
+                populateSelect('sel-n-first', headers, ['first', 'fname', 'given']);
+                populateSelect('sel-n-other', headers, ['other', 'middle', 'mname']);
+                populateSelect('sel-n-last', headers, ['last', 'lname', 'surname']);
+            } else {
+                masterData = json;
+                document.getElementById('drop-master').classList.add('loaded');
+                document.getElementById('label-master').textContent = file.name;
+                document.getElementById('label-master').className = "text-green-700 font-bold";
+                document.getElementById('map-master').classList.remove('hidden');
+
+                // Populate Dropdowns
+                populateSelect('sel-m-id', headers, ['id', 'emp', 'no', 'code']);
+                populateSelect('sel-m-first', headers, ['first', 'fname', 'given']);
+                populateSelect('sel-m-other', headers, ['other', 'middle', 'mname']);
+                populateSelect('sel-m-last', headers, ['last', 'lname', 'surname']);
             }
+            validateForm();
+        };
+        reader.readAsArrayBuffer(file);
+    }
 
-            // Fallback to simple includes
-            return keys.find(key => key.toLowerCase().includes(lowerTarget)) || null;
-        }
-
-        /**
-         * Normalizes a name string for comparison.
-         */
-        function normalizeName(first, other, last) {
-            const f = first ? first.toString().toLowerCase().trim() : '';
-            const o = other ? other.toString().toLowerCase().trim() : '';
-            const l = last ? last.toString().toLowerCase().trim() : '';
-            // Use a separator to avoid "JohnOther" matching "Johnot Her"
-            return `${f}|${o}|${l}`;
-        }
+    function populateSelect(id, headers, autoKeywords) {
+        const select = document.getElementById(id);
+        select.innerHTML = '<option value="">-- Select --</option>';
         
-        function processComparison() {
-            if (!nameListData || !masterListData) {
-                showMessage('error', 'Please upload both files before comparing.');
-                return;
+        // Add "None" option for optional fields
+        if(id.includes('other')) {
+            select.innerHTML += '<option value="__none__">(No Column)</option>';
+        }
+
+        let selectedIndex = 0;
+
+        headers.forEach((h, index) => {
+            const cleanHeader = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const option = document.createElement('option');
+            option.value = h;
+            option.text = h;
+            select.appendChild(option);
+
+            // Auto-select logic
+            if (autoKeywords.some(k => cleanHeader.includes(k))) {
+                select.value = h;
             }
+        });
+    }
 
-            showMessage('info', 'Processing comparison...');
-            resultsContainer.classList.add('hidden');
-            downloadButton.classList.add('hidden');
-            resultsTableBody.innerHTML = '';
-            lastResultsData = [];
+    function validateForm() {
+        const nFirst = document.getElementById('sel-n-first').value;
+        const nLast = document.getElementById('sel-n-last').value;
+        const mId = document.getElementById('sel-m-id').value;
+        const mFirst = document.getElementById('sel-m-first').value;
+        const mLast = document.getElementById('sel-m-last').value;
 
-            // 1. Find column keys
-            const nameKeys = {
-                first: findKey(nameListHeaders, 'first'),
-                other: findKey(nameListHeaders, 'other'),
-                last: findKey(nameListHeaders, 'last')
-            };
-            const masterKeys = {
-                first: findKey(masterListHeaders, 'first'),
-                other: findKey(masterListHeaders, 'other'),
-                last: findKey(masterListHeaders, 'last'),
-                id: findKey(masterListHeaders, 'id')
-            };
+        const isValid = nFirst && nLast && mId && mFirst && mLast;
+        
+        btnProcess.disabled = !isValid;
+        
+        if (isValid) {
+            validationMsg.textContent = "Ready to Compare!";
+            validationMsg.className = "text-center text-xs text-green-600 mt-2 font-bold";
+        } else {
+            validationMsg.textContent = "Please ensure all required (*) columns are mapped.";
+            validationMsg.className = "text-center text-xs text-red-500 mt-2 font-medium";
+        }
+    }
 
-            // 2. Validate keys
-            let error = '';
-            if (!nameKeys.first || !nameKeys.last) error += 'Name list must have "First" and "Last" name columns. ';
-            if (!masterKeys.first || !masterKeys.last || !masterKeys.id) error += 'Master list must have "First", "Last", and "ID" columns. ';
-            
-            if (!nameKeys.other) nameKeys.other = '_missing_other_key_names_'; // Use a dummy key
-            if (!masterKeys.other) masterKeys.other = '_missing_other_key_master_'; // Use a dummy key
+    function runMatcher() {
+        // Get Mapped Keys
+        const nKeys = {
+            f: document.getElementById('sel-n-first').value,
+            o: document.getElementById('sel-n-other').value,
+            l: document.getElementById('sel-n-last').value
+        };
+        const mKeys = {
+            id: document.getElementById('sel-m-id').value,
+            f: document.getElementById('sel-m-first').value,
+            o: document.getElementById('sel-m-other').value,
+            l: document.getElementById('sel-m-last').value
+        };
 
-            if (error) {
-                showMessage('error', error);
-                return;
-            }
-            
-            // 3. Create a searchable list from the master list for Fuse.js
-            const fuseMasterList = [];
-            for (const row of masterListData) {
-                const first = row[masterKeys.first] || '';
-                const other = row[masterKeys.other] || '';
-                const last = row[masterKeys.last] || '';
-                const id = row[masterKeys.id];
-                if (id) {
-                    fuseMasterList.push({
-                        normalized: normalizeName(first, other, last),
-                        id: id,
-                        originalFirst: first,
-                        originalOther: other,
-                        originalLast: last
-                    });
-                }
-            }
+        btnProcess.textContent = "Processing...";
+        btnProcess.disabled = true;
 
-            if (fuseMasterList.length === 0) {
-                showMessage('error', 'Could not build a lookup map from the master list. Check columns and data.');
-                return;
-            }
-
-            // 4. Initialize Fuse.js
-            const threshold = parseFloat(fuzzinessSlider.value) / 100.0;
-            const options = {
-                keys: ['normalized'],
-                threshold: threshold,
-                includeScore: true
-            };
-            const fuse = new Fuse(fuseMasterList, options);
-
-            // 5. Iterate through the name list and find matches
-            const results = [];
-            let foundCount = 0;
-            for (const row of nameListData) {
-                const first = row[nameKeys.first] || '';
-                const other = row[nameKeys.other] || '';
-                const last = row[nameKeys.last] || '';
+        setTimeout(() => {
+            // 1. Prepare Master List for Fuse
+            const searchList = masterData.map(row => {
+                const f = row[mKeys.f] || "";
+                const o = (mKeys.o && mKeys.o !== '__none__') ? (row[mKeys.o] || "") : "";
+                const l = row[mKeys.l] || "";
                 
-                const key = normalizeName(first, other, last);
-                const searchResult = fuse.search(key);
-                
-                if (searchResult.length > 0) {
-                    const bestMatch = searchResult[0];
-                    foundCount++;
-                    results.push({
-                        first: first,
-                        other: other,
-                        last: last,
-                        foundId: bestMatch.item.id,
-                        matchedName: `${bestMatch.item.originalFirst} ${bestMatch.item.originalOther} ${bestMatch.item.originalLast}`.replace(/\s+/g, ' ').trim(),
-                        matchScore: (1 - bestMatch.score).toFixed(2) // Invert score (0=bad -> 1=perfect)
-                    });
-                } else {
-                    results.push({
-                        first: first,
-                        other: other,
-                        last: last,
-                        foundId: 'Not Found',
-                        matchedName: '---',
-                        matchScore: '---'
-                    });
-                }
-            }
-            
-            lastResultsData = results; // Save for download
-
-            // 6. Populate the table
-            populateTable(results);
-            showMessage('success', `Comparison complete. Found ${foundCount} matches out of ${nameListData.length} names.`);
-            resultsContainer.classList.remove('hidden');
-            if (results.length > 0) {
-                downloadButton.classList.remove('hidden');
-            }
-        }
-
-        function populateTable(data) {
-            resultsTableBody.innerHTML = ''; // Clear existing data
-            let rowsHtml = '';
-            data.forEach(row => {
-                const idCellClass = row.foundId === 'Not Found' ? 'text-gray-400' : 'text-gray-900 font-medium';
-                const matchCellClass = row.matchScore === '---' ? 'text-gray-400' : 'text-gray-700';
-
-                rowsHtml += `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHTML(row.first.toString())}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHTML(row.other.toString())}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHTML(row.last.toString())}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm ${idCellClass}">${escapeHTML(row.foundId.toString())}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm ${matchCellClass}">${escapeHTML(row.matchedName.toString())}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm ${matchCellClass}">${escapeHTML(row.matchScore.toString())}</td>
-                    </tr>
-                `;
-            });
-            resultsTableBody.innerHTML = rowsHtml;
-        }
-
-        function downloadResults() {
-            if (lastResultsData.length === 0) {
-                showMessage('error', 'No results to download.');
-                return;
-            }
-            
-            // Create a "cleaner" array for export
-            const exportData = lastResultsData.map(row => ({
-                "List First Name": row.first,
-                "List Other Name": row.other,
-                "List Last Name": row.last,
-                "Found ID": row.foundId,
-                "Matched Name (from Master)": row.matchedName,
-                "Match Score (1.00 = perfect)": row.matchScore
-            }));
-
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Matched Results");
-            
-            // Trigger the download
-            XLSX.writeFile(wb, "name_match_results.xlsx");
-        }
-
-        function showMessage(type, text) {
-            messageArea.textContent = text;
-            if (type === 'error') {
-                messageArea.className = 'text-sm text-center text-red-600 font-medium';
-            } else if (type === 'success') {
-                messageArea.className = 'text-sm text-center text-green-600 font-medium';
-            } else {
-                messageArea.className = 'text-sm text-center text-blue-600';
-            }
-        }
-
-        function escapeHTML(str) {
-            return str.replace(/[&<>"']/g, function(m) {
                 return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                }[m];
+                    id: row[mKeys.id],
+                    fullName: `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim(),
+                    raw: row
+                };
             });
-        }
 
-    </script>
+            // 2. Setup Fuse
+            const fuse = new Fuse(searchList, {
+                keys: ['fullName'],
+                includeScore: true,
+                threshold: parseInt(thresholdSlider.value) / 100
+            });
+
+            // 3. Process Name List
+            processedData = nameData.map(row => {
+                const f = row[nKeys.f] || "";
+                const o = (nKeys.o && nKeys.o !== '__none__') ? (row[nKeys.o] || "") : "";
+                const l = row[nKeys.l] || "";
+                const searchName = `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
+
+                const results = fuse.search(searchName);
+                
+                let match = { id: "NOT FOUND", name: "-", score: 0 };
+                
+                if (results.length > 0) {
+                    match = {
+                        id: results[0].item.id,
+                        name: results[0].item.fullName,
+                        score: (1 - results[0].score).toFixed(2)
+                    };
+                }
+
+                return {
+                    "Name List Name": searchName,
+                    "Found ID": match.id,
+                    "Master List Name": match.name,
+                    "Confidence": match.score,
+                    _row: row // Keep original data if needed
+                };
+            });
+
+            renderResults();
+            
+            btnProcess.textContent = "Run Comparison";
+            btnProcess.disabled = false;
+        }, 100);
+    }
+
+    function renderResults() {
+        document.getElementById('results-area').classList.remove('hidden');
+        document.getElementById('result-count').textContent = `Results (${processedData.length})`;
+        
+        const tbody = document.getElementById('table-body');
+        let html = '';
+        
+        // Show top 100 to avoid lag
+        processedData.slice(0, 100).forEach(row => {
+            const color = row["Found ID"] === "NOT FOUND" ? "text-red-500" : "text-blue-600 font-bold";
+            const scoreDisplay = row.Confidence > 0 ? (row.Confidence * 100).toFixed(0) + "%" : "-";
+            
+            html += `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-3 text-slate-700">${row["Name List Name"]}</td>
+                    <td class="px-4 py-3 ${color}">${row["Found ID"]}</td>
+                    <td class="px-4 py-3 text-slate-600">${row["Master List Name"]}</td>
+                    <td class="px-4 py-3 font-mono text-xs">${scoreDisplay}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function downloadExcel() {
+        const ws = XLSX.utils.json_to_sheet(processedData.map(row => {
+            // Clean up object for export (remove internal _row)
+            const { _row, ...cleanRow } = row;
+            return cleanRow;
+        }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Matched_Results");
+        XLSX.writeFile(wb, "Hedge_Pension_Matches.xlsx");
+    }
+</script>
 </body>
 </html>
