@@ -75,15 +75,23 @@
                 <div class="flex flex-col sm:flex-row items-center gap-6">
                     <div class="w-full sm:w-1/2">
                         <label class="text-sm font-medium text-slate-700 flex justify-between">
-                            <span>Match Sensitivity</span>
-                            <span id="threshold-val" class="text-xs bg-blue-100 text-blue-800 px-2 rounded">Balanced</span>
+                            <span>Auto-Match Confidence Required</span>
+                            <span id="threshold-val" class="text-xs bg-blue-100 text-blue-800 px-2 rounded">80%</span>
                         </label>
-                        <input type="range" id="threshold" min="0" max="60" value="30" class="w-full mt-2 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        <input type="range" id="threshold" min="50" max="100" value="80" class="w-full mt-2 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
                     </div>
                     <button id="btn-process" disabled class="w-full sm:w-auto bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all">
                         Run Comparison
                     </button>
                 </div>
+                
+                <div id="progress-container" class="hidden mt-4">
+                    <div class="w-full bg-slate-200 rounded-full h-2.5">
+                        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-150" style="width: 0%"></div>
+                    </div>
+                    <p id="progress-text" class="text-xs text-center text-slate-500 mt-2 font-medium">0%</p>
+                </div>
+
                 <p id="validation-msg" class="text-center text-xs text-red-500 mt-2 font-medium">Please upload files and select required columns (*)</p>
             </div>
 
@@ -117,7 +125,7 @@
         <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="text-lg font-bold text-slate-800">Manual Review Required</h3>
-                <span class="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded">Score < 0.5</span>
+                <span id="modal-threshold-badge" class="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded">Score < 80%</span>
             </div>
             
             <p class="text-sm text-slate-600">Which master record matches this name?</p>
@@ -150,6 +158,9 @@
     const btnDownload = document.getElementById('btn-download');
     const thresholdSlider = document.getElementById('threshold');
     const validationMsg = document.getElementById('validation-msg');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
 
     // --- Event Listeners ---
     document.getElementById('input-names').addEventListener('change', (e) => handleUpload(e, 'names'));
@@ -157,13 +168,9 @@
     btnProcess.addEventListener('click', runMatcher);
     btnDownload.addEventListener('click', downloadExcel);
 
+    // Update the slider text dynamically
     thresholdSlider.addEventListener('input', (e) => {
-        const val = e.target.value;
-        const label = document.getElementById('threshold-val');
-        if(val == 0) label.textContent = "Exact Match Only";
-        else if(val < 25) label.textContent = "Strict";
-        else if(val < 45) label.textContent = "Balanced";
-        else label.textContent = "Loose";
+        document.getElementById('threshold-val').textContent = e.target.value + "%";
     });
 
     // --- Functions ---
@@ -283,6 +290,18 @@
 
         btnProcess.textContent = "Processing... Please wait.";
         btnProcess.disabled = true;
+        validationMsg.classList.add('hidden');
+
+        // Show progress UI
+        progressContainer.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        progressText.textContent = `Processing 0 of ${nameData.length}...`;
+
+        // Get the required confidence from the slider
+        const autoMatchLimit = parseInt(thresholdSlider.value) / 100;
+        
+        // Update the modal badge to show the current threshold being used
+        document.getElementById('modal-threshold-badge').textContent = `Score < ${thresholdSlider.value}%`;
 
         // Prepare Master List
         const searchList = masterData.map(row => {
@@ -290,10 +309,9 @@
             return { id: row[mKeys.id], fullName: `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim(), raw: row };
         });
 
-        const fuse = new Fuse(searchList, { keys: ['fullName'], includeScore: true, threshold: parseInt(thresholdSlider.value) / 100 });
+        const fuse = new Fuse(searchList, { keys: ['fullName'], includeScore: true, threshold: 0.5 });
         processedData = [];
 
-        // Using a 'for...of' loop so we can pause execution with 'await'
         for (let i = 0; i < nameData.length; i++) {
             const row = nameData[i];
             const f = row[nKeys.f] || "", o = (nKeys.o && nKeys.o !== '__none__') ? (row[nKeys.o] || "") : "", l = row[nKeys.l] || "";
@@ -305,13 +323,13 @@
             if (results.length > 0) {
                 const topScore = (1 - results[0].score).toFixed(2);
                 
-                // NEW LOGIC: If score is less than 0.50 (50%), ask the user
-                if (topScore >= 0.50) {
+                // If the top score meets our slider's requirement, automatically accept it
+                if (topScore >= autoMatchLimit) {
                     match = { id: results[0].item.id, name: results[0].item.fullName, score: topScore };
                 } else {
                     // Update progress counter in modal
                     document.getElementById('queue-counter').textContent = `Row ${i + 1} of ${nameData.length}`;
-                    // PAUSE the loop and wait for user to click a button in the modal
+                    // Pause and ask user
                     match = await askUserToChoose(searchName, results);
                 }
             }
@@ -323,11 +341,24 @@
                 "Confidence": match.score,
                 _row: row
             });
+
+            // --- Update Progress Bar UI ---
+            const percent = Math.floor(((i + 1) / nameData.length) * 100);
+            progressBar.style.width = percent + '%';
+            progressText.textContent = `Processing... ${percent}% (${i + 1}/${nameData.length})`;
+
+            // Yield to browser every 50 rows so the UI doesn't freeze on huge files
+            if (i % 50 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
         }
 
+        // Processing complete
+        progressText.textContent = "Complete!";
         renderResults();
         btnProcess.textContent = "Run Comparison";
         btnProcess.disabled = false;
+        setTimeout(() => progressContainer.classList.add('hidden'), 3000); // Hide progress after 3 seconds
     }
 
     function renderResults() {
