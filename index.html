@@ -19,25 +19,14 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .file-drop-area {
-            transition: all 0.2s ease;
-            background-color: white;
-        }
+        .file-drop-area { transition: all 0.2s ease; background-color: white; }
         .file-drop-area:hover { background-color: #f9fafb; border-color: #3b82f6; }
         .file-drop-area.loaded { border-color: #10b981; background-color: #ecfdf5; }
-        
-        select {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
-            background-color: white;
-        }
+        select { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; background-color: white; }
         select:focus { outline: 2px solid #3b82f6; border-color: #3b82f6; }
     </style>
 </head>
-<body class="h-full flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8 bg-slate-50">
+<body class="h-full flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8 bg-slate-50 relative">
 
     <div class="max-w-6xl w-full space-y-6">
         <div class="text-center">
@@ -48,62 +37,36 @@
         <div class="bg-white p-6 shadow rounded-xl border border-slate-200">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
                 <div class="space-y-4">
                     <h3 class="font-bold text-slate-700 border-b pb-2">1. Name List (Missing IDs)</h3>
-                    
                     <div class="relative group">
                         <input type="file" id="input-names" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                         <div id="drop-names" class="file-drop-area h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-center p-2">
                             <span id="label-names" class="text-sm text-slate-500 font-medium">Click to upload Name List</span>
                         </div>
                     </div>
-
                     <div id="map-names" class="hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
                         <p class="text-xs font-bold text-slate-500 uppercase">Map Columns</p>
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1">First Name Column <span class="text-red-500">*</span></label>
-                            <select id="sel-n-first" onchange="validateForm()"></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1">Other/Middle Name (Optional)</label>
-                            <select id="sel-n-other"></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1">Last Name Column <span class="text-red-500">*</span></label>
-                            <select id="sel-n-last" onchange="validateForm()"></select>
-                        </div>
+                        <div><label class="block text-xs text-slate-600 mb-1">First Name <span class="text-red-500">*</span></label><select id="sel-n-first" onchange="validateForm()"></select></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Other Name</label><select id="sel-n-other"></select></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Last Name <span class="text-red-500">*</span></label><select id="sel-n-last" onchange="validateForm()"></select></div>
                     </div>
                 </div>
 
                 <div class="space-y-4">
                     <h3 class="font-bold text-slate-700 border-b pb-2">2. Master List (Has IDs)</h3>
-                    
                     <div class="relative group">
                         <input type="file" id="input-master" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                         <div id="drop-master" class="file-drop-area h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-center p-2">
                             <span id="label-master" class="text-sm text-slate-500 font-medium">Click to upload Master List</span>
                         </div>
                     </div>
-
                     <div id="map-master" class="hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
                         <p class="text-xs font-bold text-slate-500 uppercase">Map Columns</p>
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1">ID Column <span class="text-red-500">*</span></label>
-                            <select id="sel-m-id" onchange="validateForm()"></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1">First Name Column <span class="text-red-500">*</span></label>
-                            <select id="sel-m-first" onchange="validateForm()"></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1">Other/Middle Name (Optional)</label>
-                            <select id="sel-m-other"></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1">Last Name Column <span class="text-red-500">*</span></label>
-                            <select id="sel-m-last" onchange="validateForm()"></select>
-                        </div>
+                        <div><label class="block text-xs text-slate-600 mb-1">ID Column <span class="text-red-500">*</span></label><select id="sel-m-id" onchange="validateForm()"></select></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">First Name <span class="text-red-500">*</span></label><select id="sel-m-first" onchange="validateForm()"></select></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Other Name</label><select id="sel-m-other"></select></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Last Name <span class="text-red-500">*</span></label><select id="sel-m-last" onchange="validateForm()"></select></div>
                     </div>
                 </div>
             </div>
@@ -117,7 +80,6 @@
                         </label>
                         <input type="range" id="threshold" min="0" max="60" value="30" class="w-full mt-2 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
                     </div>
-                    
                     <button id="btn-process" disabled class="w-full sm:w-auto bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all">
                         Run Comparison
                     </button>
@@ -133,7 +95,6 @@
                         Download Excel
                     </button>
                 </div>
-                
                 <div class="overflow-auto border rounded-lg max-h-[400px]">
                     <table class="min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50 sticky top-0">
@@ -149,6 +110,32 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <div id="review-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="text-lg font-bold text-slate-800">Manual Review Required</h3>
+                <span class="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded">Score < 0.5</span>
+            </div>
+            
+            <p class="text-sm text-slate-600">Which master record matches this name?</p>
+            <div class="p-3 bg-slate-50 border rounded-lg text-center">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">Searching For</span><br>
+                <strong id="modal-search-name" class="text-slate-900 text-lg"></strong>
+            </div>
+
+            <p class="text-xs font-bold text-slate-500 uppercase mt-4">Potential Matches</p>
+            <div id="modal-options" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                </div>
+            
+            <div class="pt-4 border-t flex justify-between items-center">
+                <span id="queue-counter" class="text-xs text-slate-500"></span>
+                <button id="btn-skip" class="bg-slate-200 text-slate-700 px-6 py-2 rounded-lg text-sm font-bold hover:bg-slate-300 transition-colors">
+                    No Match / Skip
+                </button>
+            </div>
         </div>
     </div>
 
@@ -180,7 +167,6 @@
     });
 
     // --- Functions ---
-
     function handleUpload(e, type) {
         const file = e.target.files[0];
         if (!file) return;
@@ -193,7 +179,6 @@
             const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {defval:""});
             
             if(json.length === 0) { alert("File is empty!"); return; }
-
             const headers = Object.keys(json[0]);
 
             if (type === 'names') {
@@ -202,8 +187,6 @@
                 document.getElementById('label-names').textContent = file.name;
                 document.getElementById('label-names').className = "text-green-700 font-bold";
                 document.getElementById('map-names').classList.remove('hidden');
-                
-                // Populate Dropdowns
                 populateSelect('sel-n-first', headers, ['first', 'fname', 'given']);
                 populateSelect('sel-n-other', headers, ['other', 'middle', 'mname']);
                 populateSelect('sel-n-last', headers, ['last', 'lname', 'surname']);
@@ -213,8 +196,6 @@
                 document.getElementById('label-master').textContent = file.name;
                 document.getElementById('label-master').className = "text-green-700 font-bold";
                 document.getElementById('map-master').classList.remove('hidden');
-
-                // Populate Dropdowns
                 populateSelect('sel-m-id', headers, ['id', 'emp', 'no', 'code']);
                 populateSelect('sel-m-first', headers, ['first', 'fname', 'given']);
                 populateSelect('sel-m-other', headers, ['other', 'middle', 'mname']);
@@ -228,37 +209,20 @@
     function populateSelect(id, headers, autoKeywords) {
         const select = document.getElementById(id);
         select.innerHTML = '<option value="">-- Select --</option>';
-        
-        // Add "None" option for optional fields
-        if(id.includes('other')) {
-            select.innerHTML += '<option value="__none__">(No Column)</option>';
-        }
+        if(id.includes('other')) select.innerHTML += '<option value="__none__">(No Column)</option>';
 
-        let selectedIndex = 0;
-
-        headers.forEach((h, index) => {
+        headers.forEach(h => {
             const cleanHeader = h.toLowerCase().replace(/[^a-z0-9]/g, '');
             const option = document.createElement('option');
-            option.value = h;
-            option.text = h;
+            option.value = h; option.text = h;
             select.appendChild(option);
-
-            // Auto-select logic
-            if (autoKeywords.some(k => cleanHeader.includes(k))) {
-                select.value = h;
-            }
+            if (autoKeywords.some(k => cleanHeader.includes(k))) select.value = h;
         });
     }
 
     function validateForm() {
-        const nFirst = document.getElementById('sel-n-first').value;
-        const nLast = document.getElementById('sel-n-last').value;
-        const mId = document.getElementById('sel-m-id').value;
-        const mFirst = document.getElementById('sel-m-first').value;
-        const mLast = document.getElementById('sel-m-last').value;
-
-        const isValid = nFirst && nLast && mId && mFirst && mLast;
-        
+        const isValid = ['sel-n-first', 'sel-n-last', 'sel-m-id', 'sel-m-first', 'sel-m-last']
+            .every(id => document.getElementById(id).value !== "");
         btnProcess.disabled = !isValid;
         
         if (isValid) {
@@ -270,77 +234,100 @@
         }
     }
 
-    function runMatcher() {
-        // Get Mapped Keys
-        const nKeys = {
-            f: document.getElementById('sel-n-first').value,
-            o: document.getElementById('sel-n-other').value,
-            l: document.getElementById('sel-n-last').value
-        };
-        const mKeys = {
-            id: document.getElementById('sel-m-id').value,
-            f: document.getElementById('sel-m-first').value,
-            o: document.getElementById('sel-m-other').value,
-            l: document.getElementById('sel-m-last').value
-        };
+    // --- Modal Promise Logic ---
+    function askUserToChoose(searchName, results) {
+        return new Promise((resolve) => {
+            document.getElementById('review-modal').classList.remove('hidden');
+            document.getElementById('modal-search-name').textContent = searchName;
+            
+            const optionsContainer = document.getElementById('modal-options');
+            optionsContainer.innerHTML = '';
+            
+            // Generate buttons for top 5 matches
+            results.slice(0, 5).forEach(res => {
+                const confPercent = ((1 - res.score) * 100).toFixed(0);
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-all flex justify-between items-center group bg-white";
+                btn.innerHTML = `
+                    <div>
+                        <div class="font-bold text-slate-800 group-hover:text-blue-700">${res.item.fullName}</div>
+                        <div class="text-xs text-slate-500">ID: ${res.item.id}</div>
+                    </div>
+                    <div class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600 border">${confPercent}% Match</div>
+                `;
+                
+                // When clicked, resolve the promise with this item
+                btn.onclick = () => {
+                    closeModal();
+                    resolve({ id: res.item.id, name: res.item.fullName, score: (1 - res.score).toFixed(2) });
+                };
+                optionsContainer.appendChild(btn);
+            });
 
-        btnProcess.textContent = "Processing...";
+            // Handle Skip button
+            document.getElementById('btn-skip').onclick = () => {
+                closeModal();
+                resolve({ id: "NOT FOUND", name: "-", score: 0 });
+            };
+        });
+    }
+
+    function closeModal() {
+        document.getElementById('review-modal').classList.add('hidden');
+    }
+
+    // --- Main Matcher (Now Async) ---
+    async function runMatcher() {
+        const nKeys = { f: document.getElementById('sel-n-first').value, o: document.getElementById('sel-n-other').value, l: document.getElementById('sel-n-last').value };
+        const mKeys = { id: document.getElementById('sel-m-id').value, f: document.getElementById('sel-m-first').value, o: document.getElementById('sel-m-other').value, l: document.getElementById('sel-m-last').value };
+
+        btnProcess.textContent = "Processing... Please wait.";
         btnProcess.disabled = true;
 
-        setTimeout(() => {
-            // 1. Prepare Master List for Fuse
-            const searchList = masterData.map(row => {
-                const f = row[mKeys.f] || "";
-                const o = (mKeys.o && mKeys.o !== '__none__') ? (row[mKeys.o] || "") : "";
-                const l = row[mKeys.l] || "";
-                
-                return {
-                    id: row[mKeys.id],
-                    fullName: `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim(),
-                    raw: row
-                };
-            });
+        // Prepare Master List
+        const searchList = masterData.map(row => {
+            const f = row[mKeys.f] || "", o = (mKeys.o && mKeys.o !== '__none__') ? (row[mKeys.o] || "") : "", l = row[mKeys.l] || "";
+            return { id: row[mKeys.id], fullName: `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim(), raw: row };
+        });
 
-            // 2. Setup Fuse
-            const fuse = new Fuse(searchList, {
-                keys: ['fullName'],
-                includeScore: true,
-                threshold: parseInt(thresholdSlider.value) / 100
-            });
+        const fuse = new Fuse(searchList, { keys: ['fullName'], includeScore: true, threshold: parseInt(thresholdSlider.value) / 100 });
+        processedData = [];
 
-            // 3. Process Name List
-            processedData = nameData.map(row => {
-                const f = row[nKeys.f] || "";
-                const o = (nKeys.o && nKeys.o !== '__none__') ? (row[nKeys.o] || "") : "";
-                const l = row[nKeys.l] || "";
-                const searchName = `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
+        // Using a 'for...of' loop so we can pause execution with 'await'
+        for (let i = 0; i < nameData.length; i++) {
+            const row = nameData[i];
+            const f = row[nKeys.f] || "", o = (nKeys.o && nKeys.o !== '__none__') ? (row[nKeys.o] || "") : "", l = row[nKeys.l] || "";
+            const searchName = `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
 
-                const results = fuse.search(searchName);
-                
-                let match = { id: "NOT FOUND", name: "-", score: 0 };
-                
-                if (results.length > 0) {
-                    match = {
-                        id: results[0].item.id,
-                        name: results[0].item.fullName,
-                        score: (1 - results[0].score).toFixed(2)
-                    };
-                }
-
-                return {
-                    "Name List Name": searchName,
-                    "Found ID": match.id,
-                    "Master List Name": match.name,
-                    "Confidence": match.score,
-                    _row: row // Keep original data if needed
-                };
-            });
-
-            renderResults();
+            const results = fuse.search(searchName);
+            let match = { id: "NOT FOUND", name: "-", score: 0 };
             
-            btnProcess.textContent = "Run Comparison";
-            btnProcess.disabled = false;
-        }, 100);
+            if (results.length > 0) {
+                const topScore = (1 - results[0].score).toFixed(2);
+                
+                // NEW LOGIC: If score is less than 0.50 (50%), ask the user
+                if (topScore >= 0.50) {
+                    match = { id: results[0].item.id, name: results[0].item.fullName, score: topScore };
+                } else {
+                    // Update progress counter in modal
+                    document.getElementById('queue-counter').textContent = `Row ${i + 1} of ${nameData.length}`;
+                    // PAUSE the loop and wait for user to click a button in the modal
+                    match = await askUserToChoose(searchName, results);
+                }
+            }
+
+            processedData.push({
+                "Name List Name": searchName,
+                "Found ID": match.id,
+                "Master List Name": match.name,
+                "Confidence": match.score,
+                _row: row
+            });
+        }
+
+        renderResults();
+        btnProcess.textContent = "Run Comparison";
+        btnProcess.disabled = false;
     }
 
     function renderResults() {
@@ -350,11 +337,9 @@
         const tbody = document.getElementById('table-body');
         let html = '';
         
-        // Show top 100 to avoid lag
         processedData.slice(0, 100).forEach(row => {
             const color = row["Found ID"] === "NOT FOUND" ? "text-red-500" : "text-blue-600 font-bold";
             const scoreDisplay = row.Confidence > 0 ? (row.Confidence * 100).toFixed(0) + "%" : "-";
-            
             html += `
                 <tr class="hover:bg-slate-50">
                     <td class="px-4 py-3 text-slate-700">${row["Name List Name"]}</td>
@@ -369,7 +354,6 @@
 
     function downloadExcel() {
         const ws = XLSX.utils.json_to_sheet(processedData.map(row => {
-            // Clean up object for export (remove internal _row)
             const { _row, ...cleanRow } = row;
             return cleanRow;
         }));
