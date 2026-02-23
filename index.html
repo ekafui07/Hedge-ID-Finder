@@ -250,8 +250,8 @@
             const optionsContainer = document.getElementById('modal-options');
             optionsContainer.innerHTML = '';
             
-            // Generate buttons for top 5 matches
-            results.slice(0, 5).forEach(res => {
+            // Generate buttons for top 8 matches
+            results.slice(0, 8).forEach(res => {
                 const confPercent = ((1 - res.score) * 100).toFixed(0);
                 const btn = document.createElement('button');
                 btn.className = "w-full text-left p-3 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-all flex justify-between items-center group bg-white";
@@ -283,6 +283,51 @@
         document.getElementById('review-modal').classList.add('hidden');
     }
 
+    // --- Name Normalization Helpers ---
+    const HONORIFICS = /^(mr|mrs|ms|miss|dr|prof|rev|hon|sir|lady|capt|col|sgt|cpl|pvt|eng|esq)\.?\s+/gi;
+
+    function normalizeName(name) {
+        return name
+            .toLowerCase()
+            .replace(HONORIFICS, '')           // strip honorifics
+            .replace(/[^a-z\s]/g, '')          // strip punctuation/numbers
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    // Expand initials: "J Smith" -> tries to still match "John Smith"
+    // Returns an array of search-string permutations to try
+    function namePermutations(first, other, last) {
+        const f = normalizeName(first);
+        const o = normalizeName(other);
+        const l = normalizeName(last);
+
+        const full = [f, o, l].filter(Boolean).join(' ');
+        const noOther = [f, l].filter(Boolean).join(' ');
+        const reversed = [l, f, o].filter(Boolean).join(' ');
+        const reversedNoOther = [l, f].filter(Boolean).join(' ');
+
+        // Also try last-name-first comma style: "smith john"
+        const lastFirst = [l, f].filter(Boolean).join(' ');
+
+        return [...new Set([full, noOther, reversed, reversedNoOther, lastFirst])].filter(Boolean);
+    }
+
+    // Run all permutations through fuse, return the single best result set
+    function bestFuseResults(fuse, permutations) {
+        let best = null;
+        let bestScore = Infinity;
+
+        for (const query of permutations) {
+            const results = fuse.search(query);
+            if (results.length > 0 && results[0].score < bestScore) {
+                bestScore = results[0].score;
+                best = results;
+            }
+        }
+        return best || [];
+    }
+
     // --- Main Matcher (Now Async) ---
     async function runMatcher() {
         const nKeys = { f: document.getElementById('sel-n-first').value, o: document.getElementById('sel-n-other').value, l: document.getElementById('sel-n-last').value };
@@ -297,48 +342,91 @@
         progressBar.style.width = '0%';
         progressText.textContent = `Processing 0 of ${nameData.length}...`;
 
-        // Get the required confidence from the slider
+        // Get the required confidence from the slider (as a true number 0-1)
         const autoMatchLimit = parseInt(thresholdSlider.value) / 100;
         
         // Update the modal badge to show the current threshold being used
         document.getElementById('modal-threshold-badge').textContent = `Score < ${thresholdSlider.value}%`;
 
-        // Prepare Master List
+        // Prepare Master List — store both normalized fullName and individual parts for multi-key search
         const searchList = masterData.map(row => {
-            const f = row[mKeys.f] || "", o = (mKeys.o && mKeys.o !== '__none__') ? (row[mKeys.o] || "") : "", l = row[mKeys.l] || "";
-            return { id: row[mKeys.id], fullName: `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim(), raw: row };
+            const f = row[mKeys.f] || "";
+            const o = (mKeys.o && mKeys.o !== '__none__') ? (row[mKeys.o] || "") : "";
+            const l = row[mKeys.l] || "";
+            const normF = normalizeName(f);
+            const normO = normalizeName(o);
+            const normL = normalizeName(l);
+            return {
+                id: row[mKeys.id],
+                fullName: [normF, normO, normL].filter(Boolean).join(' '),
+                fullNameRev: [normL, normF, normO].filter(Boolean).join(' '),
+                firstName: normF,
+                lastName: normL,
+                raw: row
+            };
         });
 
-        const fuse = new Fuse(searchList, { keys: ['fullName'], includeScore: true, threshold: 0.5 });
+        // Two Fuse instances:
+        // 1. fullName search (primary)
+        // 2. weighted keys search for better partial matching
+        const fuseFullName = new Fuse(searchList, {
+            keys: ['fullName', 'fullNameRev'],
+            includeScore: true,
+            threshold: 0.5,
+            ignoreLocation: true,
+            useExtendedSearch: false,
+        });
+
+        const fuseWeighted = new Fuse(searchList, {
+            keys: [
+                { name: 'lastName',  weight: 0.6 },
+                { name: 'firstName', weight: 0.4 },
+            ],
+            includeScore: true,
+            threshold: 0.5,
+            ignoreLocation: true,
+        });
+
         processedData = [];
 
         for (let i = 0; i < nameData.length; i++) {
             const row = nameData[i];
-            const f = row[nKeys.f] || "", o = (nKeys.o && nKeys.o !== '__none__') ? (row[nKeys.o] || "") : "", l = row[nKeys.l] || "";
-            const searchName = `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
+            const f = row[nKeys.f] || "";
+            const o = (nKeys.o && nKeys.o !== '__none__') ? (row[nKeys.o] || "") : "";
+            const l = row[nKeys.l] || "";
 
-            const results = fuse.search(searchName);
+            const displayName = `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
+            const perms = namePermutations(f, o, l);
+
+            // Run permutations on both fuse instances, pick best overall
+            const r1 = bestFuseResults(fuseFullName, perms);
+            const r2 = bestFuseResults(fuseWeighted, perms);
+
+            // Merge: prefer whichever strategy gave a better top score
+            let results = r1;
+            if (r2.length > 0 && (r1.length === 0 || r2[0].score < r1[0].score)) {
+                results = r2;
+            }
+
             let match = { id: "NOT FOUND", name: "-", score: 0 };
-            
+
             if (results.length > 0) {
-                const topScore = (1 - results[0].score).toFixed(2);
-                
-                // If the top score meets our slider's requirement, automatically accept it
+                // FIX: parse topScore as a float (was string vs number bug)
+                const topScore = parseFloat((1 - results[0].score).toFixed(4));
+
                 if (topScore >= autoMatchLimit) {
                     match = { id: results[0].item.id, name: results[0].item.fullName, score: topScore };
                 } else {
-                    // Update progress counter in modal
                     document.getElementById('queue-counter').textContent = `Row ${i + 1} of ${nameData.length}`;
-                    // Pause and ask user
-                    match = await askUserToChoose(searchName, results);
+                    match = await askUserToChoose(displayName, results);
                 }
             }
 
             processedData.push({
-                "Name List Name": searchName,
+                "Name List Name": displayName,
                 "Found ID": match.id,
                 "Master List Name": match.name,
-                "Confidence": match.score,
+                "Confidence": match.score > 0 ? (match.score * 100).toFixed(1) + "%" : "-",
                 _row: row
             });
 
@@ -370,7 +458,7 @@
         
         processedData.slice(0, 100).forEach(row => {
             const color = row["Found ID"] === "NOT FOUND" ? "text-red-500" : "text-blue-600 font-bold";
-            const scoreDisplay = row.Confidence > 0 ? (row.Confidence * 100).toFixed(0) + "%" : "-";
+            const scoreDisplay = row.Confidence || "-";
             html += `
                 <tr class="hover:bg-slate-50">
                     <td class="px-4 py-3 text-slate-700">${row["Name List Name"]}</td>
@@ -385,8 +473,12 @@
 
     function downloadExcel() {
         const ws = XLSX.utils.json_to_sheet(processedData.map(row => {
-            const { _row, ...cleanRow } = row;
-            return cleanRow;
+            return {
+                "Name List Name": row["Name List Name"],
+                "Found ID": row["Found ID"],
+                "Master List Name": row["Master List Name"],
+                "Confidence": row["Confidence"],
+            };
         }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Matched_Results");
