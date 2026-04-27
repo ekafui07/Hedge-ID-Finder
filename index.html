@@ -1,629 +1,825 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hedge Pensions Smart Matcher</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script>
-        const originalWarn = console.warn;
-        console.warn = (...args) => {
-            if (args[0] && args[0].includes('cdn.tailwindcss.com')) return;
-            originalWarn.apply(console, args);
-        };
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hedge Pensions — Smart Matcher + Auto Output</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f14;
+  --s1: #131920;
+  --s2: #1a2330;
+  --s3: #1f2a38;
+  --border: #283345;
+  --border2: #364555;
+  --accent: #e8924a;
+  --green: #4ade80;
+  --blue: #60a5fa;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --text: #e2eaf3;
+  --muted: #7a90a8;
+  --faint: #364555;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.mono{font-family:'DM Mono',monospace}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:24px}
+.card-sm{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.drop-zone{border:2px dashed var(--border2);border-radius:10px;position:relative;transition:border-color .2s,background .2s;background:var(--bg);cursor:pointer}
+.drop-zone:hover{border-color:var(--blue);background:#1a2330}
+.drop-zone.loaded{border-color:var(--green);background:#0f1f16}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+label.field{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+select,input[type=text],input[type=number]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none}
+select:focus,input:focus{border-color:var(--blue)}
+.btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:8px;padding:10px 22px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn-orange{background:var(--accent);color:#000}
+.btn-green{background:var(--green);color:#000}
+.btn-blue{background:var(--blue);color:#000}
+.btn-ghost{background:var(--s3);color:var(--text);border:1px solid var(--border)}
+.btn:not(:disabled):hover{opacity:.85}
+.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;font-family:'DM Mono',monospace;letter-spacing:.03em}
+.p-green{background:rgba(74,222,128,.12);color:var(--green)}
+.p-blue{background:rgba(96,165,250,.12);color:var(--blue)}
+.p-red{background:rgba(248,113,113,.12);color:var(--red)}
+.p-orange{background:rgba(232,146,74,.12);color:var(--accent)}
+.p-yellow{background:rgba(251,191,36,.12);color:var(--yellow)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{position:sticky;top:0;z-index:5;background:var(--s2)}
+th{padding:10px 14px;text-align:left;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+td{padding:9px 14px;border-bottom:1px solid rgba(40,51,69,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.015)}
+.progress-track{background:var(--s3);border-radius:99px;height:5px;overflow:hidden}
+.progress-fill{height:100%;background:var(--blue);border-radius:99px;transition:width .15s}
+.hidden{display:none!important}
 
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .file-drop-area { transition: all 0.2s ease; background-color: white; }
-        .file-drop-area:hover { background-color: #f9fafb; border-color: #3b82f6; }
-        .file-drop-area.loaded { border-color: #10b981; background-color: #ecfdf5; }
-        select { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; background-color: white; }
-        select:focus { outline: 2px solid #3b82f6; border-color: #3b82f6; }
-    </style>
+/* Step badge */
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--accent);color:#000;border-radius:6px;font-size:11px;font-weight:800;flex-shrink:0}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;padding:26px}
+.match-opt{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color .15s;display:flex;justify-content:space-between;align-items:center}
+.match-opt:hover{border-color:var(--blue)}
+
+/* Output config panel */
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.config-grid{grid-template-columns:1fr}}
+
+/* Info banner */
+.info-strip{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);display:flex;gap:8px;align-items:flex-start}
+
+/* Range input */
+input[type=range]{-webkit-appearance:none;background:var(--s3);height:5px;border-radius:99px;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer}
+</style>
 </head>
-<body class="h-full flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8 bg-slate-50 relative">
+<body>
+<div style="max-width:860px;margin:0 auto;padding:32px 16px;display:flex;flex-direction:column;gap:20px">
 
-    <div class="max-w-6xl w-full space-y-6">
-        <div class="text-center">
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900">Hedge Pensions Data Matcher</h1>
-            <p class="mt-2 text-sm text-slate-600">Upload files &rarr; Map columns &rarr; Find IDs</p>
+<!-- Header -->
+<div style="text-align:center">
+  <div style="font-size:10px;letter-spacing:.18em;font-weight:800;color:var(--accent);text-transform:uppercase;margin-bottom:8px">Hedge Pensions</div>
+  <h1 style="font-size:26px;font-weight:800;letter-spacing:-.02em">Smart Matcher <span style="color:var(--accent)">+</span> Auto Output</h1>
+  <p style="color:var(--muted);font-size:13px;margin-top:6px">Match IDs · Auto-generate the final submission file</p>
+</div>
+
+<!-- STEP 1 & 2: Upload files -->
+<div class="card">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+    <span class="step-num">1</span>
+    <span style="font-weight:700">Upload Files</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Name List -->
+    <div>
+      <div class="card-sm" style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Name List (missing IDs)</div>
+        <div class="drop-zone" id="drop-names" style="height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+          <input type="file" id="input-names" accept=".xlsx,.xls">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--muted)"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="label-names" style="font-size:12px;color:var(--muted)">Click to upload</span>
         </div>
-
-        <div class="bg-white p-6 shadow rounded-xl border border-slate-200">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="space-y-4">
-                    <h3 class="font-bold text-slate-700 border-b pb-2">1. Name List (Missing IDs)</h3>
-                    <div class="relative group">
-                        <input type="file" id="input-names" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                        <div id="drop-names" class="file-drop-area h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-center p-2">
-                            <span id="label-names" class="text-sm text-slate-500 font-medium">Click to upload Name List</span>
-                        </div>
-                    </div>
-                    <div id="map-names" class="hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Map Columns</p>
-                        <div><label class="block text-xs text-slate-600 mb-1">First Name <span class="text-red-500">*</span></label><select id="sel-n-first" onchange="validateForm()"></select></div>
-                        <div><label class="block text-xs text-slate-600 mb-1">Other Name</label><select id="sel-n-other"></select></div>
-                        <div><label class="block text-xs text-slate-600 mb-1">Last Name <span class="text-red-500">*</span></label><select id="sel-n-last" onchange="validateForm()"></select></div>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <h3 class="font-bold text-slate-700 border-b pb-2">2. Master List (Has IDs)</h3>
-                    <div class="relative group">
-                        <input type="file" id="input-master" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                        <div id="drop-master" class="file-drop-area h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-center p-2">
-                            <span id="label-master" class="text-sm text-slate-500 font-medium">Click to upload Master List</span>
-                        </div>
-                    </div>
-                    <div id="map-master" class="hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Map Columns</p>
-                        <div><label class="block text-xs text-slate-600 mb-1">ID Column <span class="text-red-500">*</span></label><select id="sel-m-id" onchange="validateForm()"></select></div>
-                        <div><label class="block text-xs text-slate-600 mb-1">First Name <span class="text-red-500">*</span></label><select id="sel-m-first" onchange="validateForm()"></select></div>
-                        <div><label class="block text-xs text-slate-600 mb-1">Other Name</label><select id="sel-m-other"></select></div>
-                        <div><label class="block text-xs text-slate-600 mb-1">Last Name <span class="text-red-500">*</span></label><select id="sel-m-last" onchange="validateForm()"></select></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-8 pt-6 border-t border-slate-200">
-                <div class="flex flex-col sm:flex-row items-center gap-6">
-                    <div class="w-full sm:w-1/2">
-                        <label class="text-sm font-medium text-slate-700 flex justify-between">
-                            <span>Auto-Match Confidence Required</span>
-                            <span id="threshold-val" class="text-xs bg-blue-100 text-blue-800 px-2 rounded">80%</span>
-                        </label>
-                        <input type="range" id="threshold" min="50" max="100" value="80" class="w-full mt-2 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                    <button id="btn-process" disabled class="w-full sm:w-auto bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all">
-                        Run Comparison
-                    </button>
-                </div>
-                
-                <div id="progress-container" class="hidden mt-4">
-                    <div class="w-full bg-slate-200 rounded-full h-2.5">
-                        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-150" style="width: 0%"></div>
-                    </div>
-                    <p id="progress-text" class="text-xs text-center text-slate-500 mt-2 font-medium">0%</p>
-                </div>
-
-                <p id="validation-msg" class="text-center text-xs text-red-500 mt-2 font-medium">Please upload files and select required columns (*)</p>
-            </div>
-
-            <div id="results-area" class="hidden mt-8 border-t pt-6">
-                <!-- Header row -->
-                <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-                    <h3 class="text-lg font-bold text-slate-800" id="result-count">Results</h3>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <button id="btn-review-notfound" class="hidden bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 shadow-sm flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m0 0l3-3m-3 3l3 3M3 12a9 9 0 1118 0A9 9 0 013 12z"></path></svg>
-                            <span id="btn-review-notfound-label">Review Not Found</span>
-                        </button>
-                        <button id="btn-download" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Download Excel
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Stats bar -->
-                <div id="stats-bar" class="grid grid-cols-3 gap-3 mb-4">
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                        <div id="stat-matched" class="text-2xl font-bold text-green-700">0</div>
-                        <div class="text-xs text-green-600 font-medium mt-0.5">Auto Matched</div>
-                    </div>
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                        <div id="stat-manual" class="text-2xl font-bold text-blue-700">0</div>
-                        <div class="text-xs text-blue-600 font-medium mt-0.5">Manually Matched</div>
-                    </div>
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                        <div id="stat-notfound" class="text-2xl font-bold text-red-600">0</div>
-                        <div class="text-xs text-red-500 font-medium mt-0.5">Not Found</div>
-                    </div>
-                </div>
-
-                <!-- Filter bar -->
-                <div class="flex gap-2 mb-3">
-                    <input id="table-filter" type="text" placeholder="Search results by name or ID..." 
-                        class="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" 
-                        oninput="filterTable()" />
-                    <select id="table-filter-status" onchange="filterTable()" class="!w-auto px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        <option value="all">All</option>
-                        <option value="found">Matched</option>
-                        <option value="notfound">Not Found</option>
-                    </select>
-                </div>
-
-                <div class="overflow-auto border rounded-lg max-h-[500px]">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead class="bg-slate-50 sticky top-0 z-10">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Name List Name</th>
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Found ID</th>
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Master List Name</th>
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500">Confidence</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body" class="bg-white divide-y divide-slate-200"></tbody>
-                    </table>
-                </div>
-                <p id="filter-count" class="text-xs text-slate-400 mt-2 text-right"></p>
-            </div>
-
-        </div>
+      </div>
+      <div id="map-names" class="hidden card-sm" style="display:flex;flex-direction:column;gap:8px">
+        <div><label class="field">First Name *</label><select id="sel-n-first"></select></div>
+        <div><label class="field">Other Name</label><select id="sel-n-other"></select></div>
+        <div><label class="field">Last Name *</label><select id="sel-n-last"></select></div>
+        <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+        <div><label class="field">Basic Salary *</label><select id="sel-n-salary"></select></div>
+        <div><label class="field">2nd Tier *</label><select id="sel-n-tier2"></select></div>
+      </div>
     </div>
 
-    <div id="review-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="text-lg font-bold text-slate-800">Manual Review Required</h3>
-                <span id="modal-threshold-badge" class="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded">Score < 80%</span>
-            </div>
-            
-            <p class="text-sm text-slate-600">Which master record matches this name?</p>
-            <div class="p-3 bg-slate-50 border rounded-lg text-center">
-                <span class="text-xs text-slate-500 uppercase tracking-wide">Searching For</span><br>
-                <strong id="modal-search-name" class="text-slate-900 text-lg"></strong>
-            </div>
-
-            <p class="text-xs font-bold text-slate-500 uppercase mt-4">Potential Matches</p>
-            <div id="modal-options" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                </div>
-            
-            <div class="pt-4 border-t flex justify-between items-center">
-                <span id="queue-counter" class="text-xs text-slate-500"></span>
-                <button id="btn-skip" class="bg-slate-200 text-slate-700 px-6 py-2 rounded-lg text-sm font-bold hover:bg-slate-300 transition-colors">
-                    No Match / Skip
-                </button>
-            </div>
+    <!-- Master List -->
+    <div>
+      <div class="card-sm" style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Master List (has IDs)</div>
+        <div class="drop-zone" id="drop-master" style="height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+          <input type="file" id="input-master" accept=".xlsx,.xls">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--muted)"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="label-master" style="font-size:12px;color:var(--muted)">Click to upload</span>
         </div>
+      </div>
+      <div id="map-master" class="hidden card-sm" style="display:flex;flex-direction:column;gap:8px">
+        <div><label class="field">ID Column *</label><select id="sel-m-id"></select></div>
+        <div><label class="field">First Name *</label><select id="sel-m-first"></select></div>
+        <div><label class="field">Other Name</label><select id="sel-m-other"></select></div>
+        <div><label class="field">Last Name *</label><select id="sel-m-last"></select></div>
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- STEP 2: Output config -->
+<div class="card" id="output-config-panel">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+    <span class="step-num">2</span>
+    <span style="font-weight:700">Output File Settings</span>
+    <span class="pill p-blue" style="margin-left:4px">Auto-fills the Fanteakwa format</span>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:16px;margin-left:30px">These values are the same for every row — set once, auto-filled on every record.</p>
+
+  <div class="info-strip" style="margin-bottom:16px">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01" stroke-linecap="round"/></svg>
+    <span><strong>Membership ID</strong>, <strong>First Name</strong>, <strong>Other Names</strong>, <strong>Surname</strong>, <strong>Basic Salary</strong> and <strong>2nd Tier</strong> are read per-row from your Name List file. <strong>3rd Tier ER</strong> and <strong>3rd Tier EE</strong> default to 0. Everything below is batch metadata set once.</span>
+  </div>
+
+  <div class="config-grid">
+    <div><label class="field">Branch / Management Unit</label><input type="text" id="cfg-branch" value="FANTEAKWA NORTH DISTRICT ASSEMBLY" placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY"></div>
+    <div><label class="field">Region</label><input type="text" id="cfg-region" value="EASTERN REGION" placeholder="e.g. EASTERN REGION"></div>
+    <div><label class="field">Cycle Date (M/D/YYYY)</label><input type="text" id="cfg-cycle" value="" placeholder="e.g. 10/15/2025"></div>
+    <div><label class="field">Investment Date (M/D/YYYY)</label><input type="text" id="cfg-invest" value="" placeholder="e.g. 12/15/2025"></div>
+  </div>
+</div>
+
+<!-- STEP 3: Run -->
+<div class="card">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+    <span class="step-num">3</span>
+    <span style="font-weight:700">Match &amp; Generate</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px">
+    <div style="flex:1;min-width:200px">
+      <label class="field" style="display:flex;justify-content:space-between">
+        <span>Auto-match confidence threshold</span>
+        <span id="threshold-val" class="pill p-orange">80%</span>
+      </label>
+      <input type="range" id="threshold" min="50" max="100" value="80" style="margin-top:8px">
+    </div>
+    <button id="btn-process" class="btn btn-orange" disabled>
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Run Comparison
+    </button>
+  </div>
+
+  <div id="progress-container" class="hidden" style="margin-top:14px">
+    <div class="progress-track"><div id="progress-bar" class="progress-fill" style="width:0%"></div></div>
+    <p id="progress-text" style="font-size:11px;text-align:center;color:var(--muted);margin-top:5px">0%</p>
+  </div>
+  <p id="validation-msg" style="font-size:12px;color:var(--red);margin-top:8px;text-align:center">Please upload files and map the required columns</p>
+</div>
+
+<!-- Results -->
+<div id="results-area" class="card hidden">
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+    <div class="card-sm" style="text-align:center">
+      <div id="stat-matched" style="font-size:26px;font-weight:800;color:var(--green)" class="mono">0</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Auto matched</div>
+    </div>
+    <div class="card-sm" style="text-align:center">
+      <div id="stat-manual" style="font-size:26px;font-weight:800;color:var(--blue)" class="mono">0</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Manually matched</div>
+    </div>
+    <div class="card-sm" style="text-align:center">
+      <div id="stat-notfound" style="font-size:26px;font-weight:800;color:var(--red)" class="mono">0</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Not found</div>
+    </div>
+  </div>
+
+  <!-- Action bar -->
+  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700" id="result-count">Results</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="btn-review-notfound" class="btn btn-ghost hidden">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12H9m0 0l3-3m-3 3l3 3M3 12a9 9 0 1118 0A9 9 0 013 12z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="btn-review-notfound-label">Review Not Found</span>
+      </button>
+      <button id="btn-download-match" class="btn btn-ghost">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Match Results
+      </button>
+      <button id="btn-download-fanteakwa" class="btn btn-green">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download Submission File
+      </button>
+    </div>
+  </div>
+
+  <!-- Output preview banner -->
+  <div class="info-strip" style="margin-bottom:14px">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>The <strong>Download Submission File</strong> button generates a ready-to-submit Excel file in the exact Fanteakwa District Assembly format — Branch, National ID, Membership ID, First Name, Other Names, Surname, SSNIT I.D., dates, salary, tiers, Management Unit, Investment Date, Region — fully pre-filled.</span>
+  </div>
+
+  <!-- Filter bar -->
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+    <input type="text" id="table-filter" placeholder="Search by name or ID…" style="flex:1">
+    <select id="table-filter-status" style="width:auto;min-width:130px">
+      <option value="all">All</option>
+      <option value="found">Matched</option>
+      <option value="notfound">Not Found</option>
+    </select>
+  </div>
+
+  <!-- Table -->
+  <div style="overflow:auto;border:1px solid var(--border);border-radius:10px;max-height:420px">
+    <table>
+      <thead>
+        <tr>
+          <th>Name List</th>
+          <th>Found ID</th>
+          <th>Master Name</th>
+          <th>Confidence</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+  <p id="filter-count" style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right"></p>
+</div>
+
+</div>
+
+<!-- Review Modal -->
+<div id="review-modal" class="modal-bg hidden">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:16px">
+      <span style="font-weight:700;font-size:15px">Manual Review</span>
+      <span id="modal-threshold-badge" class="pill p-yellow">Score &lt; 80%</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Which master record matches this name?</p>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;margin-bottom:14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Searching for</div>
+      <strong id="modal-search-name" style="font-size:17px;font-weight:800"></strong>
+    </div>
+    <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Potential Matches</p>
+    <div id="modal-options" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;padding-right:2px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:14px;margin-top:16px">
+      <span id="queue-counter" style="font-size:11px;color:var(--muted)"></span>
+      <button id="btn-skip" class="btn btn-ghost" style="padding:8px 18px;font-size:12px">No Match / Skip</button>
+    </div>
+  </div>
+</div>
 
 <script>
-    // --- Data Store ---
-    let nameData = [];
-    let masterData = [];
-    let processedData = [];
-    let fuseFullNameRef = null;
-    let fuseWeightedRef = null;
-    let mKeysRef = null;
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  nameData: [],
+  masterData: [],
+  processedData: [],
+  fuseFullName: null,
+  fuseWeighted: null,
+};
 
-    // --- DOM Refs ---
-    const btnProcess = document.getElementById('btn-process');
-    const btnDownload = document.getElementById('btn-download');
-    const thresholdSlider = document.getElementById('threshold');
-    const validationMsg = document.getElementById('validation-msg');
-    const progressContainer = document.getElementById('progress-container');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
+// ─── DOM REFS ─────────────────────────────────────────────────────────────────
+const dom = {
+  inputNames: document.getElementById('input-names'),
+  inputMaster: document.getElementById('input-master'),
+  dropNames: document.getElementById('drop-names'),
+  dropMaster: document.getElementById('drop-master'),
+  labelNames: document.getElementById('label-names'),
+  labelMaster: document.getElementById('label-master'),
+  mapNames: document.getElementById('map-names'),
+  mapMaster: document.getElementById('map-master'),
+  selNFirst: document.getElementById('sel-n-first'),
+  selNOther: document.getElementById('sel-n-other'),
+  selNLast: document.getElementById('sel-n-last'),
+  selNSalary: document.getElementById('sel-n-salary'),
+  selNTier2: document.getElementById('sel-n-tier2'),
+  selMId: document.getElementById('sel-m-id'),
+  selMFirst: document.getElementById('sel-m-first'),
+  selMOther: document.getElementById('sel-m-other'),
+  selMLast: document.getElementById('sel-m-last'),
+  btnProcess: document.getElementById('btn-process'),
+  btnDownloadMatch: document.getElementById('btn-download-match'),
+  btnDownloadFanteakwa: document.getElementById('btn-download-fanteakwa'),
+  btnReviewNotFound: document.getElementById('btn-review-notfound'),
+  btnReviewLabel: document.getElementById('btn-review-notfound-label'),
+  btnSkip: document.getElementById('btn-skip'),
+  thresholdSlider: document.getElementById('threshold'),
+  thresholdVal: document.getElementById('threshold-val'),
+  progressContainer: document.getElementById('progress-container'),
+  progressBar: document.getElementById('progress-bar'),
+  progressText: document.getElementById('progress-text'),
+  validationMsg: document.getElementById('validation-msg'),
+  resultsArea: document.getElementById('results-area'),
+  resultCount: document.getElementById('result-count'),
+  statMatched: document.getElementById('stat-matched'),
+  statManual: document.getElementById('stat-manual'),
+  statNotFound: document.getElementById('stat-notfound'),
+  tableBody: document.getElementById('table-body'),
+  tableFilter: document.getElementById('table-filter'),
+  tableFilterStatus: document.getElementById('table-filter-status'),
+  filterCount: document.getElementById('filter-count'),
+  reviewModal: document.getElementById('review-modal'),
+  modalSearchName: document.getElementById('modal-search-name'),
+  modalOptions: document.getElementById('modal-options'),
+  modalThresholdBadge: document.getElementById('modal-threshold-badge'),
+  queueCounter: document.getElementById('queue-counter'),
+  // Output config
+  cfgBranch: document.getElementById('cfg-branch'),
+  cfgRegion: document.getElementById('cfg-region'),
+  cfgCycle: document.getElementById('cfg-cycle'),
+  cfgInvest: document.getElementById('cfg-invest'),
+};
 
-    // --- Event Listeners ---
-    document.getElementById('input-names').addEventListener('change', (e) => handleUpload(e, 'names'));
-    document.getElementById('input-master').addEventListener('change', (e) => handleUpload(e, 'master'));
-    btnProcess.addEventListener('click', runMatcher);
-    btnDownload.addEventListener('click', downloadExcel);
-    document.getElementById('btn-review-notfound').addEventListener('click', reviewNotFound);
+// ─── MATCHING LOGIC ───────────────────────────────────────────────────────────
+const HONORIFICS = /^(mr|mrs|ms|miss|dr|prof|rev|hon|sir|lady|capt|col|sgt|cpl|pvt|eng|esq)\.?\s+/gi;
 
-    // Update the slider text dynamically
-    thresholdSlider.addEventListener('input', (e) => {
-        document.getElementById('threshold-val').textContent = e.target.value + "%";
+function normalizeName(name) {
+  return String(name || '').toLowerCase()
+    .replace(HONORIFICS, '').replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function namePermutations(first, other, last) {
+  const f = normalizeName(first), o = normalizeName(other), l = normalizeName(last);
+  return [...new Set([
+    [f, o, l].filter(Boolean).join(' '),
+    [f, l].filter(Boolean).join(' '),
+    [l, f, o].filter(Boolean).join(' '),
+    [l, f].filter(Boolean).join(' '),
+  ])].filter(Boolean);
+}
+
+function createSearchList(masterRows, masterKeys) {
+  return masterRows.map(row => {
+    const first = row[masterKeys.f] || '';
+    const other = masterKeys.o && masterKeys.o !== '__none__' ? row[masterKeys.o] || '' : '';
+    const last = row[masterKeys.l] || '';
+    const nf = normalizeName(first), no = normalizeName(other), nl = normalizeName(last);
+    return {
+      id: row[masterKeys.id],
+      fullName: [nf, no, nl].filter(Boolean).join(' '),
+      fullNameRev: [nl, nf, no].filter(Boolean).join(' '),
+      firstName: nf, lastName: nl,
+      raw: row,
+    };
+  });
+}
+
+function buildDisplayName(row, keys) {
+  const f = row[keys.f] || '';
+  const o = keys.o && keys.o !== '__none__' ? row[keys.o] || '' : '';
+  const l = row[keys.l] || '';
+  return `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
+}
+
+function bestFuseResults(fuse, permutations) {
+  let best = [], bestScore = Infinity;
+  for (const q of permutations) {
+    const r = fuse.search(q);
+    if (r.length > 0 && r[0].score < bestScore) { bestScore = r[0].score; best = r; }
+  }
+  return best;
+}
+
+function chooseBestResults(fuses, permutations) {
+  const p = bestFuseResults(fuses.fullName, permutations);
+  const w = bestFuseResults(fuses.weighted, permutations);
+  return (w.length > 0 && (p.length === 0 || w[0].score < p[0].score)) ? w : p;
+}
+
+function createFuses(searchList) {
+  return {
+    fullName: new Fuse(searchList, { keys: ['fullName','fullNameRev'], includeScore: true, threshold: 0.5, ignoreLocation: true }),
+    weighted: new Fuse(searchList, { keys: [{ name:'lastName', weight:0.6 },{ name:'firstName', weight:0.4 }], includeScore: true, threshold: 0.5, ignoreLocation: true }),
+  };
+}
+
+// ─── UPLOAD HANDLER ───────────────────────────────────────────────────────────
+function populateSelect(select, headers, autoKeywords) {
+  select.innerHTML = '<option value="">-- Select --</option>';
+  if (select.id.includes('other')) select.innerHTML += '<option value="__none__">(No Column)</option>';
+  headers.forEach(h => {
+    const clean = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const opt = document.createElement('option');
+    opt.value = h; opt.text = h;
+    select.appendChild(opt);
+    if (autoKeywords.some(kw => clean.includes(kw))) select.value = h;
+  });
+}
+
+function handleUpload(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    if (!rows.length) { alert('File is empty!'); return; }
+    const headers = Object.keys(rows[0]);
+    if (type === 'names') {
+      state.nameData = rows;
+      dom.dropNames.classList.add('loaded');
+      dom.labelNames.textContent = file.name;
+      dom.labelNames.style.color = 'var(--green)';
+      dom.labelNames.style.fontWeight = '700';
+      dom.mapNames.classList.remove('hidden');
+      populateSelect(dom.selNFirst, headers, ['first','fname','given']);
+      populateSelect(dom.selNOther, headers, ['other','middle','mname']);
+      populateSelect(dom.selNLast, headers, ['last','lname','surname']);
+      populateSelect(dom.selNSalary, headers, ['salary','basic','wage']);
+      populateSelect(dom.selNTier2, headers, ['tier2','2nd','second','tier_2']);
+    } else {
+      state.masterData = rows;
+      dom.dropMaster.classList.add('loaded');
+      dom.labelMaster.textContent = file.name;
+      dom.labelMaster.style.color = 'var(--green)';
+      dom.labelMaster.style.fontWeight = '700';
+      dom.mapMaster.classList.remove('hidden');
+      populateSelect(dom.selMId, headers, ['id','emp','no','code','member']);
+      populateSelect(dom.selMFirst, headers, ['first','fname','given']);
+      populateSelect(dom.selMOther, headers, ['other','middle','mname']);
+      populateSelect(dom.selMLast, headers, ['last','lname','surname']);
+    }
+    validateForm();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function validateForm() {
+  const required = [dom.selNFirst, dom.selNLast, dom.selMId, dom.selMFirst, dom.selMLast, dom.selNSalary, dom.selNTier2];
+  const ok = required.every(s => s.value && s.value !== '');
+  dom.btnProcess.disabled = !ok;
+  if (ok) {
+    dom.validationMsg.textContent = 'Ready to compare!';
+    dom.validationMsg.style.color = 'var(--green)';
+  } else {
+    dom.validationMsg.textContent = 'Please upload files and map required columns';
+    dom.validationMsg.style.color = 'var(--red)';
+  }
+}
+
+// ─── MODAL / MANUAL REVIEW ────────────────────────────────────────────────────
+let resolveChoice = null;
+
+function askUserToChoose(searchName, results) {
+  return new Promise(resolve => {
+    resolveChoice = resolve;
+    dom.modalSearchName.textContent = searchName;
+    dom.reviewModal.classList.remove('hidden');
+    dom.modalOptions.innerHTML = '';
+
+    results.slice(0, 8).forEach(r => {
+      const score = parseFloat((1 - r.score).toFixed(4));
+      const mk = getMasterKeys();
+      const mFirst = r.item.raw[mk.f] || '';
+      const mOther = mk.o && mk.o !== '__none__' ? r.item.raw[mk.o] || '' : '';
+      const mLast  = r.item.raw[mk.l] || '';
+      const fullName = [mFirst, mOther, mLast].filter(Boolean).join(' ');
+      const div = document.createElement('div');
+      div.className = 'match-opt';
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:700;font-size:14px">${fullName}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px">${r.item.id}</div>
+        </div>
+        <span class="pill ${score >= .7 ? 'p-green' : score >= .5 ? 'p-yellow' : 'p-red'}">${(score*100).toFixed(1)}%</span>
+      `;
+      div.addEventListener('click', () => {
+        dom.reviewModal.classList.add('hidden');
+        resolve({ id: r.item.id, name: r.item.fullName, score });
+      });
+      dom.modalOptions.appendChild(div);
+    });
+  });
+}
+
+dom.btnSkip.addEventListener('click', () => {
+  dom.reviewModal.classList.add('hidden');
+  if (resolveChoice) resolveChoice({ id: 'NOT FOUND', name: '-', score: 0 });
+});
+
+function getNameKeys() {
+  return { f: dom.selNFirst.value, o: dom.selNOther.value, l: dom.selNLast.value };
+}
+function getMasterKeys() {
+  return { id: dom.selMId.value, f: dom.selMFirst.value, o: dom.selMOther.value, l: dom.selMLast.value };
+}
+
+// ─── MATCHER ──────────────────────────────────────────────────────────────────
+async function runMatcher() {
+  const nameKeys = getNameKeys(), masterKeys = getMasterKeys();
+  const searchList = createSearchList(state.masterData, masterKeys);
+  const fuses = createFuses(searchList);
+  state.fuseFullName = fuses.fullName;
+  state.fuseWeighted = fuses.weighted;
+  state.processedData = [];
+  const autoLimit = parseInt(dom.thresholdSlider.value) / 100;
+  dom.modalThresholdBadge.textContent = `Score < ${dom.thresholdSlider.value}%`;
+
+  for (let i = 0; i < state.nameData.length; i++) {
+    const sourceRow = state.nameData[i];
+    const displayName = buildDisplayName(sourceRow, nameKeys);
+    const perms = namePermutations(sourceRow[nameKeys.f], sourceRow[nameKeys.o], sourceRow[nameKeys.l]);
+    const results = chooseBestResults(fuses, perms);
+    let match = { id: 'NOT FOUND', name: '-', score: 0, type: 'notfound' };
+
+    if (results.length > 0) {
+      const topScore = parseFloat((1 - results[0].score).toFixed(4));
+      if (topScore >= autoLimit) {
+        match = { id: results[0].item.id, name: results[0].item.fullName, score: topScore, type: 'auto' };
+      } else {
+        dom.queueCounter.textContent = `Row ${i+1} of ${state.nameData.length}`;
+        const chosen = await askUserToChoose(displayName, results);
+        match = { ...chosen, type: chosen.id === 'NOT FOUND' ? 'notfound' : 'manual' };
+      }
+    }
+
+    // Pull the original name parts from the source row for the output file
+    state.processedData.push({
+      'Name List Name': displayName,
+      'Found ID': match.id,
+      'Master List Name': match.name,
+      'Confidence': match.score > 0 ? `${(match.score*100).toFixed(1)}%` : '-',
+      _matchType: match.type,
+      _row: sourceRow,
     });
 
-    // --- Functions ---
-    function handleUpload(e, type) {
-        const file = e.target.files[0];
-        if (!file) return;
+    // Update progress
+    const pct = Math.round(((i+1) / state.nameData.length) * 100);
+    dom.progressBar.style.width = pct + '%';
+    dom.progressText.textContent = pct + '%';
+    if (i % 50 === 0) await new Promise(r => setTimeout(r, 0));
+  }
+  return state.processedData;
+}
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheet = workbook.SheetNames[0];
-            const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {defval:""});
-            
-            if(json.length === 0) { alert("File is empty!"); return; }
-            const headers = Object.keys(json[0]);
+async function reviewNotFound() {
+  const notFoundRows = state.processedData.filter(r => r._matchType === 'notfound');
+  if (!notFoundRows.length) return;
+  const nameKeys = getNameKeys();
 
-            if (type === 'names') {
-                nameData = json;
-                document.getElementById('drop-names').classList.add('loaded');
-                document.getElementById('label-names').textContent = file.name;
-                document.getElementById('label-names').className = "text-green-700 font-bold";
-                document.getElementById('map-names').classList.remove('hidden');
-                populateSelect('sel-n-first', headers, ['first', 'fname', 'given']);
-                populateSelect('sel-n-other', headers, ['other', 'middle', 'mname']);
-                populateSelect('sel-n-last', headers, ['last', 'lname', 'surname']);
-            } else {
-                masterData = json;
-                document.getElementById('drop-master').classList.add('loaded');
-                document.getElementById('label-master').textContent = file.name;
-                document.getElementById('label-master').className = "text-green-700 font-bold";
-                document.getElementById('map-master').classList.remove('hidden');
-                populateSelect('sel-m-id', headers, ['id', 'emp', 'no', 'code']);
-                populateSelect('sel-m-first', headers, ['first', 'fname', 'given']);
-                populateSelect('sel-m-other', headers, ['other', 'middle', 'mname']);
-                populateSelect('sel-m-last', headers, ['last', 'lname', 'surname']);
-            }
-            validateForm();
+  for (let i = 0; i < notFoundRows.length; i++) {
+    const row = notFoundRows[i];
+    const perms = namePermutations(
+      row._row[nameKeys.f] || '',
+      nameKeys.o !== '__none__' ? row._row[nameKeys.o] : '',
+      row._row[nameKeys.l] || ''
+    );
+    const results = chooseBestResults({ fullName: state.fuseFullName, weighted: state.fuseWeighted }, perms);
+    dom.queueCounter.textContent = `Not Found ${i+1} of ${notFoundRows.length}`;
+    const chosen = await askUserToChoose(row['Name List Name'], results);
+    const idx = state.processedData.indexOf(row);
+    if (idx !== -1) {
+      state.processedData[idx]['Found ID'] = chosen.id;
+      state.processedData[idx]['Master List Name'] = chosen.name;
+      state.processedData[idx]['Confidence'] = chosen.score > 0 ? `${(chosen.score*100).toFixed(1)}%` : '-';
+      state.processedData[idx]._matchType = chosen.id === 'NOT FOUND' ? 'notfound' : 'manual';
+    }
+  }
+  renderResults();
+}
+
+// ─── RENDER RESULTS ───────────────────────────────────────────────────────────
+function renderResults() {
+  const auto   = state.processedData.filter(r => r._matchType === 'auto').length;
+  const manual = state.processedData.filter(r => r._matchType === 'manual').length;
+  const nf     = state.processedData.filter(r => r._matchType === 'notfound').length;
+
+  dom.statMatched.textContent = auto;
+  dom.statManual.textContent = manual;
+  dom.statNotFound.textContent = nf;
+  dom.resultCount.textContent = `${state.processedData.length} records processed`;
+
+  dom.btnReviewNotFound.classList.toggle('hidden', nf === 0);
+  dom.btnReviewLabel.textContent = `Review Not Found (${nf})`;
+  dom.resultsArea.classList.remove('hidden');
+
+  filterTable();
+}
+
+function filterTable() {
+  const q = dom.tableFilter.value.toLowerCase();
+  const status = dom.tableFilterStatus.value;
+  const filtered = state.processedData.filter(r => {
+    const matchQ = !q || r['Name List Name'].toLowerCase().includes(q) || r['Found ID'].toLowerCase().includes(q);
+    const matchS = status === 'all' || (status === 'found' && r._matchType !== 'notfound') || (status === 'notfound' && r._matchType === 'notfound');
+    return matchQ && matchS;
+  });
+
+  dom.tableBody.innerHTML = filtered.map(r => `
+    <tr>
+      <td style="font-weight:600">${r['Name List Name']}</td>
+      <td class="mono" style="font-size:12px">${r['Found ID']}</td>
+      <td style="color:var(--muted);font-size:12px">${r['Master List Name']}</td>
+      <td><span class="pill ${r._matchType==='notfound'?'p-red':r._matchType==='auto'?'p-green':'p-blue'}">${r['Confidence']}</span></td>
+      <td><span class="pill ${r._matchType==='auto'?'p-green':r._matchType==='manual'?'p-blue':'p-red'}">${r._matchType==='auto'?'Auto':r._matchType==='manual'?'Manual':'Not Found'}</span></td>
+    </tr>
+  `).join('');
+  dom.filterCount.textContent = `Showing ${filtered.length} of ${state.processedData.length}`;
+}
+
+// ─── DOWNLOAD: MATCH RESULTS (original format) ───────────────────────────────
+function downloadMatchResults() {
+  const rows = state.processedData.map(r => ({
+    'Name List Name': r['Name List Name'],
+    'Found ID': r['Found ID'],
+    'Master List Name': r['Master List Name'],
+    'Confidence': r['Confidence'],
+    'Status': r._matchType === 'auto' ? 'Auto' : r._matchType === 'manual' ? 'Manual' : 'Not Found',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Match Results');
+  XLSX.writeFile(wb, 'Match_Results.xlsx');
+}
+
+// ─── DOWNLOAD: FANTEAKWA SUBMISSION FILE ─────────────────────────────────────
+//
+// HOW THE OUTPUT IS BUILT — column by column:
+//
+//  Branch            → from cfg-branch input (same for every row)
+//  National ID       → blank (not available from source data)
+//  Membership ID     → "Found ID" from the matcher (the matched ID from master list)
+//  First Name        → from the NAME LIST file, first-name column
+//  Other Names       → from the NAME LIST file, other-name column
+//  Surname           → from the NAME LIST file, last-name column
+//  SSNIT I.D.        → blank (not in source data — user fills manually if needed)
+//  Date of Birth     → blank
+//  Start Date        → blank
+//  Cycle Date        → from cfg-cycle input (same for every row)
+//  Basic Salary      → from cfg-salary input (same for every row)
+//  2nd Tier          → from cfg-tier2 input (same for every row)
+//  3rd Tier ER       → from cfg-tier3er input (same for every row)
+//  3rd Tier EE       → from cfg-tier3ee input (same for every row)
+//  Management Unit   → same as Branch (from cfg-branch input)
+//  Investment Date   → from cfg-invest input (same for every row)
+//  Region            → from cfg-region input (same for every row)
+//
+// Rows where Found ID = "NOT FOUND" are included but highlighted so the user
+// can see which records still need attention.
+//
+function downloadFanteakwaFile() {
+  const nameKeys = getNameKeys();
+  const branch  = dom.cfgBranch.value.trim() || '';
+  const region  = dom.cfgRegion.value.trim() || '';
+  const cycle   = dom.cfgCycle.value.trim()  || '';
+  const invest  = dom.cfgInvest.value.trim() || '';
+  const salarCol = dom.selNSalary.value;
+  const tier2Col = dom.selNTier2.value;
+
+  const headers = [
+    'Branch','National ID','Membership ID','First Name','Other Names','Surname',
+    'SSNIT I.D.','Date of Birth (M/D/YYYY)','Start Date (M/D/YYYY)','Cycle Date (M/D/YYYY)',
+    'Basic Salary','2nd Tier','3rd Tier ER','3rd Tier EE',
+    'Management Unit','Investment Date (M/D/YYYY)','Region'
+  ];
+
+  const rows = state.processedData.map(r => {
+    const src = r._row || {};
+    const firstName  = String(src[nameKeys.f]  || '').trim();
+    const otherNames = nameKeys.o && nameKeys.o !== '__none__' ? String(src[nameKeys.o] || '').trim() : '';
+    const surname    = String(src[nameKeys.l]  || '').trim();
+    // Read salary and 2nd tier from the source row's own columns
+    const salary = parseFloat(src[salarCol]) || 0;
+    const tier2  = parseFloat(src[tier2Col])  || 0;
+
+    return {
+      'Branch':                      branch,
+      'National ID':                 '',
+      'Membership ID':               r['Found ID'],
+      'First Name':                  firstName,
+      'Other Names':                 otherNames,
+      'Surname':                     surname,
+      'SSNIT I.D.':                  '',
+      'Date of Birth (M/D/YYYY)':    '',
+      'Start Date (M/D/YYYY)':       '',
+      'Cycle Date (M/D/YYYY)':       cycle,
+      'Basic Salary':                r['Found ID'] === 'NOT FOUND' ? '' : salary,
+      '2nd Tier':                    r['Found ID'] === 'NOT FOUND' ? '' : tier2,
+      '3rd Tier ER':                 0,
+      '3rd Tier EE':                 0,
+      'Management Unit':             branch,
+      'Investment Date (M/D/YYYY)':  invest,
+      'Region':                      region,
+    };
+  });
+
+  // Build workbook
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+  // Style header row bold + background color
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cellAddr = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!ws[cellAddr]) continue;
+    ws[cellAddr].s = {
+      font: { bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E3A5F' } },
+      alignment: { wrapText: true, vertical: 'center' },
+    };
+  }
+
+  // Highlight NOT FOUND rows in light red
+  rows.forEach((row, rowIdx) => {
+    if (row['Membership ID'] === 'NOT FOUND') {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const cellAddr = XLSX.utils.encode_cell({ r: rowIdx + 1, c: C });
+        if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
+        ws[cellAddr].s = {
+          fill: { fgColor: { rgb: 'FEE2E2' } },
+          font: { color: { rgb: 'B91C1C' } },
         };
-        reader.readAsArrayBuffer(file);
+      }
     }
+  });
 
-    function populateSelect(id, headers, autoKeywords) {
-        const select = document.getElementById(id);
-        select.innerHTML = '<option value="">-- Select --</option>';
-        if(id.includes('other')) select.innerHTML += '<option value="__none__">(No Column)</option>';
+  // Set column widths to match Fanteakwa format
+  ws['!cols'] = [
+    { wch: 36 }, // Branch
+    { wch: 14 }, // National ID
+    { wch: 16 }, // Membership ID
+    { wch: 14 }, // First Name
+    { wch: 14 }, // Other Names
+    { wch: 16 }, // Surname
+    { wch: 18 }, // SSNIT I.D.
+    { wch: 20 }, // DOB
+    { wch: 20 }, // Start Date
+    { wch: 20 }, // Cycle Date
+    { wch: 13 }, // Basic Salary
+    { wch: 10 }, // 2nd Tier
+    { wch: 11 }, // 3rd Tier ER
+    { wch: 11 }, // 3rd Tier EE
+    { wch: 36 }, // Management Unit
+    { wch: 22 }, // Investment Date
+    { wch: 16 }, // Region
+  ];
 
-        headers.forEach(h => {
-            const cleanHeader = h.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const option = document.createElement('option');
-            option.value = h; option.text = h;
-            select.appendChild(option);
-            if (autoKeywords.some(k => cleanHeader.includes(k))) select.value = h;
-        });
-    }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
 
-    function validateForm() {
-        const isValid = ['sel-n-first', 'sel-n-last', 'sel-m-id', 'sel-m-first', 'sel-m-last']
-            .every(id => document.getElementById(id).value !== "");
-        btnProcess.disabled = !isValid;
-        
-        if (isValid) {
-            validationMsg.textContent = "Ready to Compare!";
-            validationMsg.className = "text-center text-xs text-green-600 mt-2 font-bold";
-        } else {
-            validationMsg.textContent = "Please ensure all required (*) columns are mapped.";
-            validationMsg.className = "text-center text-xs text-red-500 mt-2 font-medium";
-        }
-    }
+  // Generate filename with today's date and branch name
+  const today = new Date();
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const yyyy = today.getFullYear();
+  const safeBranch = branch.replace(/[^A-Z0-9]/gi, '_').replace(/_+/g,'_').toUpperCase();
+  XLSX.writeFile(wb, `${safeBranch}_${mm}_${yyyy}.xlsx`);
+}
 
-    // --- Modal Promise Logic ---
-    function askUserToChoose(searchName, results) {
-        return new Promise((resolve) => {
-            document.getElementById('review-modal').classList.remove('hidden');
-            document.getElementById('modal-search-name').textContent = searchName;
-            
-            const optionsContainer = document.getElementById('modal-options');
-            optionsContainer.innerHTML = '';
-            
-            // Generate buttons for top 8 matches
-            results.slice(0, 8).forEach(res => {
-                const confPercent = ((1 - res.score) * 100).toFixed(0);
-                const btn = document.createElement('button');
-                btn.className = "w-full text-left p-3 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-all flex justify-between items-center group bg-white";
-                btn.innerHTML = `
-                    <div>
-                        <div class="font-bold text-slate-800 group-hover:text-blue-700">${res.item.fullName}</div>
-                        <div class="text-xs text-slate-500">ID: ${res.item.id}</div>
-                    </div>
-                    <div class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600 border">${confPercent}% Match</div>
-                `;
-                
-                // When clicked, resolve the promise with this item
-                btn.onclick = () => {
-                    closeModal();
-                    resolve({ id: res.item.id, name: res.item.fullName, score: (1 - res.score).toFixed(2) });
-                };
-                optionsContainer.appendChild(btn);
-            });
+// ─── MAIN PROCESS ─────────────────────────────────────────────────────────────
+async function handleRunMatcher() {
+  dom.btnProcess.disabled = true;
+  dom.validationMsg.textContent = '';
+  dom.progressContainer.classList.remove('hidden');
+  dom.progressBar.style.width = '0%';
+  dom.progressText.textContent = '0%';
+  dom.resultsArea.classList.add('hidden');
 
-            // Handle Skip button
-            document.getElementById('btn-skip').onclick = () => {
-                closeModal();
-                resolve({ id: "NOT FOUND", name: "-", score: 0 });
-            };
-        });
-    }
+  await runMatcher();
 
-    function closeModal() {
-        document.getElementById('review-modal').classList.add('hidden');
-    }
+  dom.progressText.textContent = 'Complete!';
+  renderResults();
+  dom.btnProcess.disabled = false;
+  setTimeout(() => dom.progressContainer.classList.add('hidden'), 3000);
+}
 
-    // --- Name Normalization Helpers ---
-    const HONORIFICS = /^(mr|mrs|ms|miss|dr|prof|rev|hon|sir|lady|capt|col|sgt|cpl|pvt|eng|esq)\.?\s+/gi;
+// ─── EVENTS ───────────────────────────────────────────────────────────────────
+dom.inputNames.addEventListener('change', e => handleUpload(e, 'names'));
+dom.inputMaster.addEventListener('change', e => handleUpload(e, 'master'));
+dom.btnProcess.addEventListener('click', handleRunMatcher);
+dom.btnDownloadMatch.addEventListener('click', downloadMatchResults);
+dom.btnDownloadFanteakwa.addEventListener('click', downloadFanteakwaFile);
+dom.btnReviewNotFound.addEventListener('click', async () => {
+  dom.btnReviewNotFound.disabled = true;
+  dom.btnReviewLabel.textContent = 'Reviewing…';
+  await reviewNotFound();
+  dom.btnReviewNotFound.disabled = false;
+  validateForm();
+});
+dom.thresholdSlider.addEventListener('input', () => {
+  dom.thresholdVal.textContent = dom.thresholdSlider.value + '%';
+});
+dom.tableFilter.addEventListener('input', filterTable);
+dom.tableFilterStatus.addEventListener('change', filterTable);
+[dom.selNFirst,dom.selNOther,dom.selNLast,dom.selNSalary,dom.selNTier2,dom.selMId,dom.selMFirst,dom.selMOther,dom.selMLast]
+  .forEach(s => s.addEventListener('change', validateForm));
 
-    function normalizeName(name) {
-        return name
-            .toLowerCase()
-            .replace(HONORIFICS, '')           // strip honorifics
-            .replace(/[^a-z\s]/g, '')          // strip punctuation/numbers
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    // Expand initials: "J Smith" -> tries to still match "John Smith"
-    // Returns an array of search-string permutations to try
-    function namePermutations(first, other, last) {
-        const f = normalizeName(first);
-        const o = normalizeName(other);
-        const l = normalizeName(last);
-
-        const full = [f, o, l].filter(Boolean).join(' ');
-        const noOther = [f, l].filter(Boolean).join(' ');
-        const reversed = [l, f, o].filter(Boolean).join(' ');
-        const reversedNoOther = [l, f].filter(Boolean).join(' ');
-
-        // Also try last-name-first comma style: "smith john"
-        const lastFirst = [l, f].filter(Boolean).join(' ');
-
-        return [...new Set([full, noOther, reversed, reversedNoOther, lastFirst])].filter(Boolean);
-    }
-
-    // Run all permutations through fuse, return the single best result set
-    function bestFuseResults(fuse, permutations) {
-        let best = null;
-        let bestScore = Infinity;
-
-        for (const query of permutations) {
-            const results = fuse.search(query);
-            if (results.length > 0 && results[0].score < bestScore) {
-                bestScore = results[0].score;
-                best = results;
-            }
-        }
-        return best || [];
-    }
-
-    // --- Main Matcher (Now Async) ---
-    async function runMatcher() {
-        const nKeys = { f: document.getElementById('sel-n-first').value, o: document.getElementById('sel-n-other').value, l: document.getElementById('sel-n-last').value };
-        const mKeys = { id: document.getElementById('sel-m-id').value, f: document.getElementById('sel-m-first').value, o: document.getElementById('sel-m-other').value, l: document.getElementById('sel-m-last').value };
-
-        btnProcess.textContent = "Processing... Please wait.";
-        btnProcess.disabled = true;
-        validationMsg.classList.add('hidden');
-
-        // Show progress UI
-        progressContainer.classList.remove('hidden');
-        progressBar.style.width = '0%';
-        progressText.textContent = `Processing 0 of ${nameData.length}...`;
-
-        // Get the required confidence from the slider (as a true number 0-1)
-        const autoMatchLimit = parseInt(thresholdSlider.value) / 100;
-        
-        // Update the modal badge to show the current threshold being used
-        document.getElementById('modal-threshold-badge').textContent = `Score < ${thresholdSlider.value}%`;
-
-        // Prepare Master List — store both normalized fullName and individual parts for multi-key search
-        const searchList = masterData.map(row => {
-            const f = row[mKeys.f] || "";
-            const o = (mKeys.o && mKeys.o !== '__none__') ? (row[mKeys.o] || "") : "";
-            const l = row[mKeys.l] || "";
-            const normF = normalizeName(f);
-            const normO = normalizeName(o);
-            const normL = normalizeName(l);
-            return {
-                id: row[mKeys.id],
-                fullName: [normF, normO, normL].filter(Boolean).join(' '),
-                fullNameRev: [normL, normF, normO].filter(Boolean).join(' '),
-                firstName: normF,
-                lastName: normL,
-                raw: row
-            };
-        });
-
-        // Two Fuse instances:
-        // 1. fullName search (primary)
-        // 2. weighted keys search for better partial matching
-        const fuseFullName = new Fuse(searchList, {
-            keys: ['fullName', 'fullNameRev'],
-            includeScore: true,
-            threshold: 0.5,
-            ignoreLocation: true,
-            useExtendedSearch: false,
-        });
-
-        const fuseWeighted = new Fuse(searchList, {
-            keys: [
-                { name: 'lastName',  weight: 0.6 },
-                { name: 'firstName', weight: 0.4 },
-            ],
-            includeScore: true,
-            threshold: 0.5,
-            ignoreLocation: true,
-        });
-
-        // Save refs for post-run re-use (Review Not Found)
-        fuseFullNameRef = fuseFullName;
-        fuseWeightedRef = fuseWeighted;
-        mKeysRef = mKeys;
-
-        processedData = [];
-
-        for (let i = 0; i < nameData.length; i++) {
-            const row = nameData[i];
-            const f = row[nKeys.f] || "";
-            const o = (nKeys.o && nKeys.o !== '__none__') ? (row[nKeys.o] || "") : "";
-            const l = row[nKeys.l] || "";
-
-            const displayName = `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
-            const perms = namePermutations(f, o, l);
-
-            // Run permutations on both fuse instances, pick best overall
-            const r1 = bestFuseResults(fuseFullName, perms);
-            const r2 = bestFuseResults(fuseWeighted, perms);
-
-            // Merge: prefer whichever strategy gave a better top score
-            let results = r1;
-            if (r2.length > 0 && (r1.length === 0 || r2[0].score < r1[0].score)) {
-                results = r2;
-            }
-
-            let match = { id: "NOT FOUND", name: "-", score: 0, type: "notfound" };
-
-            if (results.length > 0) {
-                // FIX: parse topScore as a float (was string vs number bug)
-                const topScore = parseFloat((1 - results[0].score).toFixed(4));
-
-                if (topScore >= autoMatchLimit) {
-                    match = { id: results[0].item.id, name: results[0].item.fullName, score: topScore, type: "auto" };
-                } else {
-                    document.getElementById('queue-counter').textContent = `Row ${i + 1} of ${nameData.length}`;
-                    const chosen = await askUserToChoose(displayName, results);
-                    match = { ...chosen, type: chosen.id === "NOT FOUND" ? "notfound" : "manual" };
-                }
-            }
-
-            processedData.push({
-                "Name List Name": displayName,
-                "Found ID": match.id,
-                "Master List Name": match.name,
-                "Confidence": match.score > 0 ? (match.score * 100).toFixed(1) + "%" : "-",
-                _matchType: match.type,
-                _row: row
-            });
-
-            // --- Update Progress Bar UI ---
-            const percent = Math.floor(((i + 1) / nameData.length) * 100);
-            progressBar.style.width = percent + '%';
-            progressText.textContent = `Processing... ${percent}% (${i + 1}/${nameData.length})`;
-
-            // Yield to browser every 50 rows so the UI doesn't freeze on huge files
-            if (i % 50 === 0) {
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
-        }
-
-        // Processing complete
-        progressText.textContent = "Complete!";
-        renderResults();
-        btnProcess.textContent = "Run Comparison";
-        btnProcess.disabled = false;
-        setTimeout(() => progressContainer.classList.add('hidden'), 3000); // Hide progress after 3 seconds
-    }
-
-    function renderResults() {
-        document.getElementById('results-area').classList.remove('hidden');
-        document.getElementById('result-count').textContent = `Results (${processedData.length})`;
-
-        // Stats
-        const autoCount    = processedData.filter(r => r._matchType === 'auto').length;
-        const manualCount  = processedData.filter(r => r._matchType === 'manual').length;
-        const notFoundCount = processedData.filter(r => r._matchType === 'notfound').length;
-        document.getElementById('stat-matched').textContent  = autoCount;
-        document.getElementById('stat-manual').textContent   = manualCount;
-        document.getElementById('stat-notfound').textContent = notFoundCount;
-
-        // Show/hide Review Not Found button
-        const btnReview = document.getElementById('btn-review-notfound');
-        if (notFoundCount > 0) {
-            btnReview.classList.remove('hidden');
-            document.getElementById('btn-review-notfound-label').textContent = `Review Not Found (${notFoundCount})`;
-        } else {
-            btnReview.classList.add('hidden');
-        }
-
-        // Clear filter
-        document.getElementById('table-filter').value = '';
-        document.getElementById('table-filter-status').value = 'all';
-
-        renderTableRows(processedData);
-    }
-
-    function renderTableRows(data) {
-        const tbody = document.getElementById('table-body');
-        let html = '';
-        data.forEach(row => {
-            const isNotFound = row["Found ID"] === "NOT FOUND";
-            const idColor = isNotFound ? "text-red-500 font-semibold" : "text-blue-600 font-bold";
-            const rowBg   = isNotFound ? "bg-red-50 hover:bg-red-100" : "hover:bg-slate-50";
-            const badge   = row._matchType === 'manual'
-                ? `<span class="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">manual</span>`
-                : '';
-            html += `
-                <tr class="${rowBg}">
-                    <td class="px-4 py-3 text-slate-700">${row["Name List Name"]}${badge}</td>
-                    <td class="px-4 py-3 ${idColor}">${row["Found ID"]}</td>
-                    <td class="px-4 py-3 text-slate-600">${row["Master List Name"]}</td>
-                    <td class="px-4 py-3 font-mono text-xs">${row.Confidence || "-"}</td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html || '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-sm">No results match your filter.</td></tr>';
-        document.getElementById('filter-count').textContent = `Showing ${data.length} of ${processedData.length} rows`;
-    }
-
-    function filterTable() {
-        const query  = document.getElementById('table-filter').value.toLowerCase().trim();
-        const status = document.getElementById('table-filter-status').value;
-
-        const filtered = processedData.filter(row => {
-            const matchesStatus =
-                status === 'all' ||
-                (status === 'found'    && row["Found ID"] !== "NOT FOUND") ||
-                (status === 'notfound' && row["Found ID"] === "NOT FOUND");
-
-            const matchesQuery = !query ||
-                row["Name List Name"].toLowerCase().includes(query) ||
-                String(row["Found ID"]).toLowerCase().includes(query) ||
-                row["Master List Name"].toLowerCase().includes(query);
-
-            return matchesStatus && matchesQuery;
-        });
-
-        renderTableRows(filtered);
-    }
-
-    // Review all NOT FOUND rows one by one using the existing modal
-    async function reviewNotFound() {
-        const notFoundRows = processedData.filter(r => r._matchType === 'notfound');
-        if (notFoundRows.length === 0) return;
-
-        const btnReview = document.getElementById('btn-review-notfound');
-        btnReview.disabled = true;
-        btnReview.textContent = "Reviewing...";
-
-        for (let i = 0; i < notFoundRows.length; i++) {
-            const row = notFoundRows[i];
-            const perms = row["Name List Name"].split(' ').length >= 2
-                ? namePermutations(
-                    row._row[document.getElementById('sel-n-first').value] || '',
-                    (document.getElementById('sel-n-other').value !== '__none__' ? row._row[document.getElementById('sel-n-other').value] : '') || '',
-                    row._row[document.getElementById('sel-n-last').value]  || ''
-                  )
-                : [row["Name List Name"]];
-
-            const r1 = bestFuseResults(fuseFullNameRef, perms);
-            const r2 = bestFuseResults(fuseWeightedRef, perms);
-            let results = r1;
-            if (r2.length > 0 && (r1.length === 0 || r2[0].score < r1[0].score)) results = r2;
-
-            document.getElementById('queue-counter').textContent = `Not Found ${i + 1} of ${notFoundRows.length}`;
-            const chosen = await askUserToChoose(row["Name List Name"], results);
-
-            // Update the original row in processedData
-            const idx = processedData.indexOf(row);
-            if (idx !== -1) {
-                processedData[idx]["Found ID"]        = chosen.id;
-                processedData[idx]["Master List Name"] = chosen.name;
-                processedData[idx]["Confidence"]       = chosen.score > 0 ? (chosen.score * 100).toFixed(1) + "%" : "-";
-                processedData[idx]._matchType          = chosen.id === "NOT FOUND" ? "notfound" : "manual";
-            }
-        }
-
-        // Re-render with updated data
-        renderResults();
-        btnReview.disabled = false;
-    }
-
-    function downloadExcel() {
-        const ws = XLSX.utils.json_to_sheet(processedData.map(row => {
-            return {
-                "Name List Name": row["Name List Name"],
-                "Found ID": row["Found ID"],
-                "Master List Name": row["Master List Name"],
-                "Confidence": row["Confidence"],
-            };
-        }));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Matched_Results");
-        XLSX.writeFile(wb, "Hedge_Pension_Matches.xlsx");
-    }
+validateForm();
 </script>
 </body>
 </html>
