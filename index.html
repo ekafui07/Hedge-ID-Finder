@@ -453,15 +453,54 @@ function tokenOverlapScore(queryTokens, candidateTokens) {
   return matches / Math.max(querySet.size, candidateSet.size);
 }
 
+// ─── PHONETIC MATCHING (Soundex) ───────────────────────────────────────────
+// Catches same-sounding, differently-spelled names — e.g. "Mensah"/"Mensa",
+// "Owusu"/"Owusuh", "Asante"/"Asanti", "Boateng"/"Boatin" — that pure
+// edit-distance fuzzy matching can miss when the spelling drifts too far.
+const SOUNDEX_CODES = { B:'1',F:'1',P:'1',V:'1', C:'2',G:'2',J:'2',K:'2',Q:'2',S:'2',X:'2',Z:'2', D:'3',T:'3', L:'4', M:'5',N:'5', R:'6' };
+
+function soundex(token) {
+  const s = String(token || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!s) return '';
+  let result = s[0];
+  let prevCode = SOUNDEX_CODES[s[0]] || '';
+  for (let i = 1; i < s.length && result.length < 4; i++) {
+    const c = s[i];
+    const code = SOUNDEX_CODES[c] || '';
+    if (code) {
+      if (code !== prevCode) result += code;
+      prevCode = code;
+    } else if (c !== 'H' && c !== 'W') {
+      prevCode = '';
+    }
+  }
+  return (result + '000').slice(0, 4);
+}
+
+function phoneticTokenOverlapScore(queryTokens, candidateTokens) {
+  if (!queryTokens.length || !candidateTokens.length) return 0;
+  const candidateCodes = new Set(candidateTokens.map(soundex).filter(Boolean));
+  const queryCodes = queryTokens.map(soundex).filter(Boolean);
+  if (!queryCodes.length || !candidateCodes.size) return 0;
+  let matches = 0;
+  new Set(queryCodes).forEach(code => { if (candidateCodes.has(code)) matches++; });
+  return matches / Math.max(new Set(queryCodes).size, candidateCodes.size);
+}
+
 function adjustedResultScore(result, queryTokens) {
   const fuseScore = 1 - result.score;
-  const overlap = tokenOverlapScore(queryTokens, result.item.tokens || tokenizeName(result.item.fullName));
+  const candidateTokens = result.item.tokens || tokenizeName(result.item.fullName);
+  const overlap = tokenOverlapScore(queryTokens, candidateTokens);
+  const phoneticOverlap = phoneticTokenOverlapScore(queryTokens, candidateTokens);
   const queryFirst = queryTokens[0] || '';
   const queryLast = queryTokens[queryTokens.length - 1] || '';
-  const candidateTokens = result.item.tokens || [];
-  const firstBonus = queryFirst && candidateTokens[0] === queryFirst ? 0.06 : 0;
-  const lastBonus = queryLast && candidateTokens[candidateTokens.length - 1] === queryLast ? 0.08 : 0;
-  return Math.min(1, fuseScore * 0.68 + overlap * 0.24 + firstBonus + lastBonus);
+  const candFirst = candidateTokens[0] || '';
+  const candLast = candidateTokens[candidateTokens.length - 1] || '';
+  const firstBonus = queryFirst && candFirst === queryFirst ? 0.06
+                    : queryFirst && candFirst && soundex(queryFirst) === soundex(candFirst) ? 0.03 : 0;
+  const lastBonus = queryLast && candLast === queryLast ? 0.08
+                   : queryLast && candLast && soundex(queryLast) === soundex(candLast) ? 0.04 : 0;
+  return Math.min(1, fuseScore * 0.55 + overlap * 0.20 + phoneticOverlap * 0.15 + firstBonus + lastBonus);
 }
 
 function rerankResults(results, queryTokens) {
@@ -798,8 +837,8 @@ function downloadFanteakwaFile() {
       'Date of Birth (M/D/YYYY)':    '',
       'Start Date (M/D/YYYY)':       '',
       'Cycle Date (M/D/YYYY)':       cycle,
-      'Basic Salary':                r['Found ID'] === 'NOT FOUND' ? '' : salary,
-      '2nd Tier':                    r['Found ID'] === 'NOT FOUND' ? '' : tier2,
+      'Basic Salary':                salary,
+      '2nd Tier':                    tier2,
       '3rd Tier ER':                 0,
       '3rd Tier EE':                 0,
       'Management Unit':             branch,
