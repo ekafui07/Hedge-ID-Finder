@@ -3,950 +3,539 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hedge Pensions — Smart Matcher</title>
+<meta name="description" content="Reconcile name mismatch issues and generate pension schedule files effortlessly. Match IDs and export submission sheets for Hedge Pensions.">
+<title>Hedge Pensions — Smart Matcher Guide & Templates</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0b0f14;
-  --s1: #131920;
-  --s2: #1a2330;
-  --s3: #1f2a38;
-  --border: #283345;
-  --border2: #364555;
+  --bg: #06090e;
+  --card-bg: linear-gradient(135deg, rgba(22, 30, 43, 0.7) 0%, rgba(11, 16, 23, 0.9) 100%);
   --accent: #e8924a;
-  --green: #4ade80;
-  --blue: #60a5fa;
-  --red: #f87171;
-  --yellow: #fbbf24;
-  --text: #e2eaf3;
-  --muted: #7a90a8;
-  --faint: #364555;
+  --accent-light: #ffb574;
+  --border: rgba(255, 255, 255, 0.05);
+  --border-focus: rgba(232, 146, 74, 0.35);
+  --green: #10b981;
+  --blue: #3b82f6;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
-.mono{font-family:'DM Mono',monospace}
-.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:24px}
-.card-sm{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
-.drop-zone{border:2px dashed var(--border2);border-radius:10px;position:relative;transition:border-color .2s,background .2s;background:var(--bg);cursor:pointer}
-.drop-zone:hover{border-color:var(--blue);background:#1a2330}
-.drop-zone.loaded{border-color:var(--green);background:#0f1f16}
-.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-label.field{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
-select,input[type=text],input[type=number]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none}
-select:focus,input:focus{border-color:var(--blue)}
-.btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:8px;padding:10px 22px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap}
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.35;cursor:not-allowed}
-.btn-orange{background:var(--accent);color:#000}
-.btn-green{background:var(--green);color:#000}
-.btn-blue{background:var(--blue);color:#000}
-.btn-ghost{background:var(--s3);color:var(--text);border:1px solid var(--border)}
-.btn:not(:disabled):hover{opacity:.85}
-.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;font-family:'DM Mono',monospace;letter-spacing:.03em}
-.p-green{background:rgba(74,222,128,.12);color:var(--green)}
-.p-blue{background:rgba(96,165,250,.12);color:var(--blue)}
-.p-red{background:rgba(248,113,113,.12);color:var(--red)}
-.p-orange{background:rgba(232,146,74,.12);color:var(--accent)}
-.p-yellow{background:rgba(251,191,36,.12);color:var(--yellow)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead{position:sticky;top:0;z-index:5;background:var(--s2)}
-th{padding:10px 14px;text-align:left;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
-td{padding:9px 14px;border-bottom:1px solid rgba(40,51,69,.5);vertical-align:middle}
-tr:hover td{background:rgba(255,255,255,.015)}
-.progress-track{background:var(--s3);border-radius:99px;height:5px;overflow:hidden}
-.progress-fill{height:100%;background:var(--blue);border-radius:99px;transition:width .15s}
-.hidden{display:none!important}
-
-/* Step badge */
-.step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--accent);color:#000;border-radius:6px;font-size:11px;font-weight:800;flex-shrink:0}
-
-/* Modal */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal{background:var(--s1);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;padding:26px}
-.match-opt{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color .15s;display:flex;justify-content:space-between;align-items:center}
-.match-opt:hover{border-color:var(--blue)}
-
-/* Output config panel */
-.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:600px){.config-grid{grid-template-columns:1fr}}
-
-.filename-row{margin-top:10px}
-
-/* Info banner */
-.info-strip{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--blue);display:flex;gap:8px;align-items:flex-start}
-
-/* Range input */
-input[type=range]{-webkit-appearance:none;background:var(--s3);height:5px;border-radius:99px;cursor:pointer;border:none;padding:0}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer}
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+h1, h2, h3 {
+  font-family: 'Outfit', sans-serif;
+}
+/* Glowing decorative shapes */
+.glow-orb-orange {
+  position: absolute;
+  top: -120px;
+  right: -100px;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(232, 146, 74, 0.12) 0%, transparent 65%);
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(40px);
+  animation: float-slow 15s infinite alternate ease-in-out;
+}
+.glow-orb-blue {
+  position: absolute;
+  bottom: 100px;
+  left: -200px;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 65%);
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(45px);
+  animation: float-slow 20s infinite alternate-reverse ease-in-out;
+}
+@keyframes float-slow {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(30px) scale(1.05); }
+}
+/* Grid background pattern */
+.bg-mesh {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 0;
+  pointer-events: none;
+}
+/* Premium glass cards */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-focus);
+  box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(232, 146, 74, 0.05);
+}
+/* Glowing Primary Button */
+.btn-glow {
+  background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+  color: #070a0f;
+  font-weight: 700;
+  box-shadow: 0 0 0 0 rgba(232, 146, 74, 0);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-glow:hover {
+  box-shadow: 0 0 25px 5px rgba(232, 146, 74, 0.35);
+  transform: translateY(-2px) scale(1.02);
+}
+.btn-glow:active {
+  transform: translateY(0) scale(1);
+}
+/* Interactive switch tabs */
+.tab-btn {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tab-btn.active {
+  background-color: rgba(232, 146, 74, 0.1);
+  color: var(--accent-light);
+  border-color: rgba(232, 146, 74, 0.25);
+}
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
 </style>
 </head>
-<body>
-<div style="max-width:860px;margin:0 auto;padding:32px 16px;display:flex;flex-direction:column;gap:20px">
+<body class="relative min-h-screen py-10 px-4 md:px-8 bg-[#06090e]">
+<div class="bg-mesh"></div>
+<div class="glow-orb-orange"></div>
+<div class="glow-orb-blue"></div>
 
-<!-- Header -->
-<div style="text-align:center">
-  <div style="font-size:10px;letter-spacing:.18em;font-weight:800;color:var(--accent);text-transform:uppercase;margin-bottom:8px">Hedge Pensions</div>
-  <h1 style="font-size:26px;font-weight:800;letter-spacing:-.02em">Smart Matcher <span style="color:var(--accent)">+</span> Schedule Generator</h1>
-  <p style="color:var(--muted);font-size:13px;margin-top:6px">Match IDs · Auto-generate the final submission file</p>
-</div>
+<div class="max-w-6xl mx-auto relative z-10">
+  <!-- Navigation Header -->
+  <header class="flex justify-between items-center mb-16 pb-6 border-b border-white/5">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#e8924a] to-[#ffaa60] flex items-center justify-center shadow-lg shadow-amber-500/20">
+        <svg width="20" height="20" fill="none" stroke="#070a0f" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="text-sm font-extrabold uppercase tracking-[0.2em] bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">Hedge Pensions</span>
+    </div>
+    <div class="text-xs uppercase tracking-[0.1em] font-extrabold text-[#e8924a] bg-amber-500/10 px-3.5 py-1.5 rounded-full border border-amber-500/15">
+      Local Reconciler v1.2
+    </div>
+  </header>
 
-<!-- STEP 1 & 2: Upload files -->
-<div class="card">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
-    <span class="step-num">1</span>
-    <span style="font-weight:700">Upload Files</span>
-  </div>
+  <!-- Hero Section -->
+  <section class="text-center mb-20 max-w-4xl mx-auto">
+    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
+      Matching Employee Records<br/>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#e8924a] via-[#ffb574] to-[#3b82f6]">Has Never Been Easier</span>
+    </h1>
+    <p class="text-slate-400 text-base sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+      Upload your monthly contribution schedule and reconcile name spelling issues against master databases in seconds. Fully local, client-side, secure processing.
+    </p>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <!-- Name List -->
-    <div>
-      <div class="card-sm" style="margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">SCHEDULE NAMES LIST</div>
-        <div class="drop-zone" id="drop-names" style="height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
-          <input type="file" id="input-names" accept=".xlsx,.xls">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--muted)"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span id="label-names" style="font-size:12px;color:var(--muted)">Click to upload</span>
+    <!-- Action Bar -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+      <a id="btn-launch-tool" href="app.html" class="btn-glow px-8 py-4 rounded-xl text-base inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/10">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Launch Smart Matcher
+      </a>
+      
+      <div class="flex gap-2">
+        <button id="btn-download-id-tmpl" onclick="downloadTemplate('id')" class="px-6 py-4 rounded-xl text-sm font-semibold border border-white/5 bg-white/5 hover:border-amber-500/30 hover:bg-white/10 active:scale-95 transition-all inline-flex items-center gap-2">
+          <svg class="text-[#e8924a]" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ID Template
+        </button>
+        <button id="btn-download-list-tmpl" onclick="downloadTemplate('list')" class="px-6 py-4 rounded-xl text-sm font-semibold border border-white/5 bg-white/5 hover:border-amber-500/30 hover:bg-white/10 active:scale-95 transition-all inline-flex items-center gap-2">
+          <svg class="text-[#e8924a]" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          List Template
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Key Value Pillars -->
+  <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-20">
+    <div class="glass-card p-6 rounded-2xl">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#e8924a] mb-4">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 class="font-bold text-sm text-slate-100 mb-1.5">Soundex Phonetics</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Catches name variances like <em>Mensah</em> vs <em>Mensa</em> or <em>Asante</em> vs <em>Asanti</em> that other checkers miss.
+      </p>
+    </div>
+
+    <div class="glass-card p-6 rounded-2xl">
+      <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.248-8.25-3.285z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 class="font-bold text-sm text-slate-100 mb-1.5">100% In-Browser Privacy</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Reconcile calculations fully locally on your device. Your sensitive data stays within your spreadsheet and never hits our database.
+      </p>
+    </div>
+
+    <div class="glass-card p-6 rounded-2xl">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 class="font-bold text-sm text-slate-100 mb-1.5">Auto &amp; Manual Review</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Instantly pair high confidence matches, and easily click to choose the correct row for borderline scores.
+      </p>
+    </div>
+
+    <div class="glass-card p-6 rounded-2xl">
+      <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 class="font-bold text-sm text-slate-100 mb-1.5">Configurable Matching</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Fine-tune auto-accept filters using a confidence threshold slider to perfectly align matching speeds with data accuracy.
+      </p>
+    </div>
+  </section>
+
+  <!-- How it Works Guide -->
+  <section class="mb-20">
+    <div class="text-center mb-12">
+      <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">Streamlined Reconciliation Pipeline</h2>
+      <p class="text-slate-400 text-xs mt-2 max-w-md mx-auto">Five simple phases from template setup to final schedule export.</p>
+    </div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div class="glass-card p-6 rounded-2xl border-white/5 relative">
+        <div class="step-number text-[10px] tracking-wider font-extrabold w-max px-2.5 py-0.5 rounded-full mb-4">PHASE 01</div>
+        <h4 class="font-bold text-sm text-slate-100 mb-2">Prepare Sheets</h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          Download templates and fill your values. Correct formatting helps auto-matching run optimally.
+        </p>
+      </div>
+
+      <div class="glass-card p-6 rounded-2xl border-white/5 relative">
+        <div class="step-number text-[10px] tracking-wider font-extrabold w-max px-2.5 py-0.5 rounded-full mb-4">PHASE 02</div>
+        <h4 class="font-bold text-sm text-slate-100 mb-2">Load Datasets</h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          Load your Schedule Name List and Master Reference List. Data is processed locally in memory.
+        </p>
+      </div>
+
+      <div class="glass-card p-6 rounded-2xl border-white/5 relative">
+        <div class="step-number text-[10px] tracking-wider font-extrabold w-max px-2.5 py-0.5 rounded-full mb-4">PHASE 03</div>
+        <h4 class="font-bold text-sm text-slate-100 mb-2">Map Headers</h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          The engine auto-detects columns, or you can manually assign names, salaries, and IDs in the dropdown.
+        </p>
+      </div>
+
+      <div class="glass-card p-6 rounded-2xl border-white/5 relative">
+        <div class="step-number text-[10px] tracking-wider font-extrabold w-max px-2.5 py-0.5 rounded-full mb-4">PHASE 04</div>
+        <h4 class="font-bold text-sm text-slate-100 mb-2">Fuzzy Matching</h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          High scores match instantly. Under-threshold records show in a modal review dialog.
+        </p>
+      </div>
+
+      <div class="glass-card p-6 rounded-2xl border-white/5 relative">
+        <div class="step-number text-[10px] tracking-wider font-extrabold w-max px-2.5 py-0.5 rounded-full mb-4">PHASE 05</div>
+        <h4 class="font-bold text-sm text-slate-100 mb-2">Generate Output</h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          Download formatted Excel files with correct values. Unmatched files are highlighted for review.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Templates Preview Switcher -->
+  <section class="mb-20">
+    <div class="text-center mb-8">
+      <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">Interactive Schema Previews</h2>
+      <p class="text-slate-400 text-xs mt-2">Toggle between datasets to preview column layouts and sample records.</p>
+    </div>
+
+    <div class="max-w-4xl mx-auto">
+      <!-- Tabs Switcher -->
+      <div class="flex gap-2 justify-center mb-6">
+        <button id="tab-btn-id" onclick="switchTab('id')" class="tab-btn active px-5 py-2.5 rounded-lg border border-white/5 text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 flex items-center gap-2">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM5.25 15.75c0-1.657 2.015-3 4.5-3s4.5 1.343 4.5 3v.75H5.25v-.75z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ID List (Master Reference)
+        </button>
+        <button id="tab-btn-list" onclick="switchTab('list')" class="tab-btn px-5 py-2.5 rounded-lg border border-white/5 text-xs font-bold text-slate-400 bg-transparent hover:bg-white/5 flex items-center gap-2">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-3.75 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Schedule Names List (Monthly Input)
+        </button>
+      </div>
+
+      <!-- Tab Content 1: ID List Template -->
+      <div id="tab-content-id" class="glass-card p-6 rounded-2xl">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h4 class="font-bold text-slate-100 text-sm">Hedge Member ID List Template</h4>
+            <p class="text-xs text-slate-400 mt-1">This master reference file acts as the database against which monthly employee records are reconciled.</p>
+          </div>
+          <button onclick="downloadTemplate('id')" class="text-xs font-bold text-[#e8924a] hover:text-[#ffaa60] flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 active:scale-95 transition-all">
+            Download Excel
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
-      </div>
-      <div id="map-names" class="hidden card-sm" style="display:flex;flex-direction:column;gap:8px">
-        <div><label class="field">First Name *</label><select id="sel-n-first"></select></div>
-        <div><label class="field">Other Name</label><select id="sel-n-other"></select></div>
-        <div><label class="field">Last Name *</label><select id="sel-n-last"></select></div>
-        <div style="border-top:1px solid var(--border);margin:4px 0"></div>
-        <div><label class="field">Basic Salary *</label><select id="sel-n-salary"></select></div>
-        <div><label class="field">2nd Tier *</label><select id="sel-n-tier2"></select></div>
-      </div>
-    </div>
 
-    <!-- Master List -->
-    <div>
-      <div class="card-sm" style="margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">MEMBER ID LIST</div>
-        <div class="drop-zone" id="drop-master" style="height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
-          <input type="file" id="input-master" accept=".xlsx,.xls">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--muted)"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span id="label-master" style="font-size:12px;color:var(--muted)">Click to upload</span>
+        <div class="overflow-x-auto border border-white/5 rounded-xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-white/5 border-b border-white/5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <th class="p-3">Member ID *</th>
+                <th class="p-3">First Name *</th>
+                <th class="p-3">Last Name *</th>
+                <th class="p-3">Other Name</th>
+                <th class="p-3">National ID</th>
+                <th class="p-3">SSNIT ID</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 text-xs text-slate-300">
+              <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3 mono">HP-1001</td>
+                <td class="p-3">John</td>
+                <td class="p-3">Mensah</td>
+                <td class="p-3 text-slate-500">Kofi</td>
+                <td class="p-3">GHA-001234567-1</td>
+                <td class="p-3">3456789012</td>
+              </tr>
+              <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3 mono">HP-1002</td>
+                <td class="p-3">Ama</td>
+                <td class="p-3">Osei</td>
+                <td class="p-3 text-slate-500">-</td>
+                <td class="p-3">GHA-009876543-2</td>
+                <td class="p-3">9876543210</td>
+              </tr>
+              <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3 mono">HP-1003</td>
+                <td class="p-3">David</td>
+                <td class="p-3">Boateng</td>
+                <td class="p-3 text-slate-500">Kwame</td>
+                <td class="p-3">GHA-005544332-9</td>
+                <td class="p-3">5544332211</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <p class="text-[10px] text-slate-500 mt-3">* Columns marked with an asterisk must be mapped on the Smart Matcher UI prior to running.</p>
       </div>
-      <div id="map-master" class="hidden card-sm" style="display:flex;flex-direction:column;gap:8px">
-        <div><label class="field">ID Column *</label><select id="sel-m-id"></select></div>
-        <div><label class="field">First Name *</label><select id="sel-m-first"></select></div>
-        <div><label class="field">Other Name</label><select id="sel-m-other"></select></div>
-        <div><label class="field">Last Name *</label><select id="sel-m-last"></select></div>
+
+      <!-- Tab Content 2: Schedule Names List -->
+      <div id="tab-content-list" class="glass-card p-6 rounded-2xl hidden">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h4 class="font-bold text-slate-100 text-sm">Hedge Schedule Names List Template</h4>
+            <p class="text-xs text-slate-400 mt-1">This input file represents the monthly salary/tier contributions sheet that has misspelled name fields.</p>
+          </div>
+          <button onclick="downloadTemplate('list')" class="text-xs font-bold text-[#e8924a] hover:text-[#ffaa60] flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 active:scale-95 transition-all">
+            Download Excel
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto border border-white/5 rounded-xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-white/5 border-b border-white/5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <th class="p-3">First Name *</th>
+                <th class="p-3">Last Name *</th>
+                <th class="p-3">Basic Salary *</th>
+                <th class="p-3">2nd Tier *</th>
+                <th class="p-3">National ID</th>
+                <th class="p-3">SSNIT ID</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 text-xs text-slate-300">
+              <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3">John</td>
+                <td class="p-3">Mensa <span class="text-amber-500 font-extrabold" title="Name is missing 'h' at the end relative to Master List">*</span></td>
+                <td class="p-3 mono">1,500.00</td>
+                <td class="p-3 mono">75.00</td>
+                <td class="p-3">GHA-001234567-1</td>
+                <td class="p-3">3456789012</td>
+              </tr>
+              <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3">Ama</td>
+                <td class="p-3">Osei</td>
+                <td class="p-3 mono">2,200.00</td>
+                <td class="p-3 mono">110.00</td>
+                <td class="p-3">GHA-009876543-2</td>
+                <td class="p-3">9876543210</td>
+              </tr>
+              <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3">David</td>
+                <td class="p-3">Boatin <span class="text-amber-500 font-extrabold" title="Phonetic spelling deviation from Master 'Boateng'">*</span></td>
+                <td class="p-3 mono">1,850.50</td>
+                <td class="p-3 mono">92.53</td>
+                <td class="p-3 text-slate-500">-</td>
+                <td class="p-3 text-slate-500">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-3">
+          <span class="text-amber-400 font-extrabold">Fuzzy Match Sample:</span> <em>Mensa</em> and <em>Boatin</em> will be matched perfectly to <em>John Kofi Mensah</em> and <em>David Kwame Boateng</em> in the master reference file via Soundex/Fuse.js matching.
+        </p>
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- STEP 2: Output config -->
-<div class="card" id="output-config-panel">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-    <span class="step-num">2</span>
-    <span style="font-weight:700">Output File Settings</span>
-    <span class="pill p-blue" style="margin-left:4px">Auto-Fills The main Schedule File</span>
-  </div>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:16px;margin-left:30px">These values are the same for every row — set once, auto-filled on every record.</p>
-
-  <div class="info-strip" style="margin-bottom:16px">
-    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01" stroke-linecap="round"/></svg>
-    <span><strong>Membership ID</strong>, <strong>First Name</strong>, <strong>Other Names</strong>, <strong>Surname</strong>, <strong>Basic Salary</strong> and <strong>2nd Tier</strong> are read per-row from your Name List file. <strong>3rd Tier ER</strong> and <strong>3rd Tier EE</strong> default to 0. Everything below is batch metadata set once.</span>
-  </div>
-
-  <div class="config-grid">
-    <div><label class="field">Branch / Management Unit</label><input type="text" id="cfg-branch" value="FANTEAKWA NORTH DISTRICT ASSEMBLY" placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY"></div>
-    <div><label class="field">Region</label><input type="text" id="cfg-region" value="EASTERN REGION" placeholder="e.g. EASTERN REGION"></div>
-    <div><label class="field">Cycle Date (M/D/YYYY)</label><input type="text" id="cfg-cycle" value="" placeholder="e.g. 10/15/2025"></div>
-    <div><label class="field">Investment Date (M/D/YYYY)</label><input type="text" id="cfg-invest" value="" placeholder="e.g. 12/15/2025"></div>
-  </div>
-  <div class="filename-row">
-    <label class="field">Output File Name</label>
-    <input type="text" id="cfg-output-name" value="" placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY OCTOBER 2026">
-  </div>
-</div>
-
-<!-- STEP 3: Run -->
-<div class="card">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-    <span class="step-num">3</span>
-    <span style="font-weight:700">Match &amp; Generate</span>
-  </div>
-
-  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px">
-    <div style="flex:1;min-width:200px">
-      <label class="field" style="display:flex;justify-content:space-between">
-        <span>Auto-match confidence threshold</span>
-        <span id="threshold-val" class="pill p-orange">80%</span>
-      </label>
-      <input type="range" id="threshold" min="50" max="100" value="80" style="margin-top:8px">
+  <!-- Technical Spec & FAQ Section -->
+  <section class="glass-card p-8 rounded-2xl border-white/5 mb-16">
+    <div class="flex items-center gap-2 mb-6">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-[#e8924a]"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01" stroke-linecap="round"/></svg>
+      <h3 class="font-extrabold text-base text-slate-200">Reconciliation Logic &amp; Compliance</h3>
     </div>
-    <button id="btn-process" class="btn btn-orange" disabled>
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Run Comparison
-    </button>
-  </div>
-
-  <div id="progress-container" class="hidden" style="margin-top:14px">
-    <div class="progress-track"><div id="progress-bar" class="progress-fill" style="width:0%"></div></div>
-    <p id="progress-text" style="font-size:11px;text-align:center;color:var(--muted);margin-top:5px">0%</p>
-  </div>
-  <p id="validation-msg" style="font-size:12px;color:var(--red);margin-top:8px;text-align:center">Please upload files and map the required columns</p>
-</div>
-
-<!-- Results -->
-<div id="results-area" class="card hidden">
-
-  <!-- Stats -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-    <div class="card-sm" style="text-align:center">
-      <div id="stat-matched" style="font-size:26px;font-weight:800;color:var(--green)" class="mono">0</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Auto matched</div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs text-slate-400 leading-relaxed">
+      <div>
+        <h4 class="font-bold text-slate-200 text-sm mb-2">How secure is this portal?</h4>
+        <p class="mb-4">
+          All reconciliation computations and Excel parsing processes run entirely within your browser window. No information is transmitted to external servers, protecting critical corporate financial and employee data.
+        </p>
+        <h4 class="font-bold text-slate-200 text-sm mb-2">What happens to unmatched names?</h4>
+        <p>
+          Unmatched rows with no matching IDs are highlighted in bright red inside the exported final submission file, allowing your accounts team to locate and input missing IDs manually.
+        </p>
+      </div>
+      <div>
+        <h4 class="font-bold text-slate-200 text-sm mb-2">Matching priority parameters</h4>
+        <p class="mb-4">
+          The engine first attempts matching via ID columns (National ID / SSNIT ID) if mapped in both files. If those fields are absent or mismatch, it falls back to fuzzy and soundex string-matching permutations.
+        </p>
+        <h4 class="font-bold text-slate-200 text-sm mb-2">Compatible runtimes</h4>
+        <p>
+          The application has been verified to run optimally on modern browsers including Chrome, Edge, Firefox, and Safari with JavaScript and DOM operations enabled.
+        </p>
+      </div>
     </div>
-    <div class="card-sm" style="text-align:center">
-      <div id="stat-manual" style="font-size:26px;font-weight:800;color:var(--blue)" class="mono">0</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Manually matched</div>
-    </div>
-    <div class="card-sm" style="text-align:center">
-      <div id="stat-notfound" style="font-size:26px;font-weight:800;color:var(--red)" class="mono">0</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Not found</div>
-    </div>
-  </div>
+  </section>
 
-  <!-- Action bar -->
-  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="font-size:13px;font-weight:700" id="result-count">Results</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="btn-review-notfound" class="btn btn-ghost hidden">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12H9m0 0l3-3m-3 3l3 3M3 12a9 9 0 1118 0A9 9 0 013 12z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span id="btn-review-notfound-label">Review Not Found</span>
-      </button>
-      <button id="btn-download-match" class="btn btn-ghost">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Match Results
-      </button>
-      <button id="btn-download-fanteakwa" class="btn btn-green">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Download Submission File
-      </button>
-    </div>
-  </div>
-
-  <!-- Output preview banner -->
-  <div class="info-strip" style="margin-bottom:14px">
-    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span>The <strong>Download Submission File</strong> button generates a ready-to-submit Excel file in the exact format — Branch, National ID, Membership ID, First Name, Other Names, Surname, SSNIT I.D., dates, salary, tiers, Management Unit, Investment Date, Region — fully pre-filled.</span>
-  </div>
-
-  <!-- Filter bar -->
-  <div style="display:flex;gap:8px;margin-bottom:10px">
-    <input type="text" id="table-filter" placeholder="Search by name or ID…" style="flex:1">
-    <select id="table-filter-status" style="width:auto;min-width:130px">
-      <option value="all">All</option>
-      <option value="found">Matched</option>
-      <option value="notfound">Not Found</option>
-    </select>
-  </div>
-
-  <!-- Table -->
-  <div style="overflow:auto;border:1px solid var(--border);border-radius:10px;max-height:420px">
-    <table>
-      <thead>
-        <tr>
-          <th>Name List</th>
-          <th>Found ID</th>
-          <th>Master Name</th>
-          <th>Confidence</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="table-body"></tbody>
-    </table>
-  </div>
-  <p id="filter-count" style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right"></p>
-</div>
-
-</div>
-
-<!-- Review Modal -->
-<div id="review-modal" class="modal-bg hidden">
-  <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:16px">
-      <span style="font-weight:700;font-size:15px">Manual Review</span>
-      <span id="modal-threshold-badge" class="pill p-yellow">Score &lt; 80%</span>
-    </div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Which master record matches this name?</p>
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;margin-bottom:14px">
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Searching for</div>
-      <strong id="modal-search-name" style="font-size:17px;font-weight:800"></strong>
-    </div>
-    <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Potential Matches</p>
-    <div id="modal-options" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;padding-right:2px"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:14px;margin-top:16px">
-      <span id="queue-counter" style="font-size:11px;color:var(--muted)"></span>
-      <button id="btn-skip" class="btn btn-ghost" style="padding:8px 18px;font-size:12px">No Match / Skip</button>
-    </div>
-  </div>
+  <!-- Footer -->
+  <footer class="text-center text-xs text-slate-600 border-t border-white/5 pt-8">
+    <p>&copy; 2026 Hedge Pensions. Smart Matcher System. All rights reserved.</p>
+  </footer>
 </div>
 
 <script>
-// ─── STATE ───────────────────────────────────────────────────────────────────
-const state = {
-  nameData: [],
-  masterData: [],
-  processedData: [],
-  fuseFullName: null,
-  fuseWeighted: null,
-  exactLookup: null,
-};
+// ─── TAB NAVIGATION LOGIC ──────────────────────────────────────────────────
+function switchTab(tabId) {
+  const idBtn = document.getElementById('tab-btn-id');
+  const listBtn = document.getElementById('tab-btn-list');
+  const idContent = document.getElementById('tab-content-id');
+  const listContent = document.getElementById('tab-content-list');
 
-// ─── DOM REFS ─────────────────────────────────────────────────────────────────
-const dom = {
-  inputNames: document.getElementById('input-names'),
-  inputMaster: document.getElementById('input-master'),
-  dropNames: document.getElementById('drop-names'),
-  dropMaster: document.getElementById('drop-master'),
-  labelNames: document.getElementById('label-names'),
-  labelMaster: document.getElementById('label-master'),
-  mapNames: document.getElementById('map-names'),
-  mapMaster: document.getElementById('map-master'),
-  selNFirst: document.getElementById('sel-n-first'),
-  selNOther: document.getElementById('sel-n-other'),
-  selNLast: document.getElementById('sel-n-last'),
-  selNSalary: document.getElementById('sel-n-salary'),
-  selNTier2: document.getElementById('sel-n-tier2'),
-  selMId: document.getElementById('sel-m-id'),
-  selMFirst: document.getElementById('sel-m-first'),
-  selMOther: document.getElementById('sel-m-other'),
-  selMLast: document.getElementById('sel-m-last'),
-  btnProcess: document.getElementById('btn-process'),
-  btnDownloadMatch: document.getElementById('btn-download-match'),
-  btnDownloadFanteakwa: document.getElementById('btn-download-fanteakwa'),
-  btnReviewNotFound: document.getElementById('btn-review-notfound'),
-  btnReviewLabel: document.getElementById('btn-review-notfound-label'),
-  btnSkip: document.getElementById('btn-skip'),
-  thresholdSlider: document.getElementById('threshold'),
-  thresholdVal: document.getElementById('threshold-val'),
-  progressContainer: document.getElementById('progress-container'),
-  progressBar: document.getElementById('progress-bar'),
-  progressText: document.getElementById('progress-text'),
-  validationMsg: document.getElementById('validation-msg'),
-  resultsArea: document.getElementById('results-area'),
-  resultCount: document.getElementById('result-count'),
-  statMatched: document.getElementById('stat-matched'),
-  statManual: document.getElementById('stat-manual'),
-  statNotFound: document.getElementById('stat-notfound'),
-  tableBody: document.getElementById('table-body'),
-  tableFilter: document.getElementById('table-filter'),
-  tableFilterStatus: document.getElementById('table-filter-status'),
-  filterCount: document.getElementById('filter-count'),
-  reviewModal: document.getElementById('review-modal'),
-  modalSearchName: document.getElementById('modal-search-name'),
-  modalOptions: document.getElementById('modal-options'),
-  modalThresholdBadge: document.getElementById('modal-threshold-badge'),
-  queueCounter: document.getElementById('queue-counter'),
-  // Output config
-  cfgBranch: document.getElementById('cfg-branch'),
-  cfgRegion: document.getElementById('cfg-region'),
-  cfgCycle: document.getElementById('cfg-cycle'),
-  cfgInvest: document.getElementById('cfg-invest'),
-  cfgOutputName: document.getElementById('cfg-output-name'),
-};
+  if (tabId === 'id') {
+    idBtn.classList.add('active', 'bg-white/5', 'text-slate-300');
+    idBtn.classList.remove('bg-transparent', 'text-slate-400');
+    listBtn.classList.remove('active', 'bg-white/5', 'text-slate-300');
+    listBtn.classList.add('bg-transparent', 'text-slate-400');
 
-// ─── MATCHING LOGIC ───────────────────────────────────────────────────────────
-const HONORIFICS = /^(mr|mrs|ms|miss|dr|prof|rev|hon|sir|lady|capt|col|sgt|cpl|pvt|eng|esq)\.?\s+/gi;
-const NAME_SUFFIXES = /\b(jr|sr|ii|iii|iv|v)\b\.?/gi;
-const SEARCH_LIMIT = 10;
-
-function stripDiacritics(text) {
-  return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-function normalizeName(name) {
-  return stripDiacritics(String(name || '').toLowerCase())
-    .replace(HONORIFICS, '')
-    .replace(NAME_SUFFIXES, '')
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function tokenizeName(name) {
-  return normalizeName(name).split(' ').filter(Boolean);
-}
-
-function tokenSignature(tokens) {
-  return [...new Set(tokens)].sort().join(' ');
-}
-
-function namePermutations(first, other, last) {
-  const f = normalizeName(first), o = normalizeName(other), l = normalizeName(last);
-  const tokens = [f, o, l].filter(Boolean).join(' ').split(' ').filter(Boolean);
-  return [...new Set([
-    [f, o, l].filter(Boolean).join(' '),
-    [f, l].filter(Boolean).join(' '),
-    [l, f, o].filter(Boolean).join(' '),
-    [l, f].filter(Boolean).join(' '),
-    tokens.join(' '),
-    tokenSignature(tokens),
-  ])].filter(Boolean);
-}
-
-function createSearchList(masterRows, masterKeys) {
-  return masterRows.map(row => {
-    const first = row[masterKeys.f] || '';
-    const other = masterKeys.o && masterKeys.o !== '__none__' ? row[masterKeys.o] || '' : '';
-    const last = row[masterKeys.l] || '';
-    const nf = normalizeName(first), no = normalizeName(other), nl = normalizeName(last);
-    const tokens = [nf, no, nl].filter(Boolean).join(' ').split(' ').filter(Boolean);
-    return {
-      id: row[masterKeys.id],
-      fullName: [nf, no, nl].filter(Boolean).join(' '),
-      fullNameRev: [nl, nf, no].filter(Boolean).join(' '),
-      tokenSignature: tokenSignature(tokens),
-      firstName: nf, lastName: nl,
-      tokens,
-      raw: row,
-    };
-  });
-}
-
-function buildExactLookup(searchList) {
-  const lookup = new Map();
-  for (const item of searchList) {
-    for (const key of [item.fullName, item.fullNameRev, item.tokenSignature]) {
-      if (!key) continue;
-      const bucket = lookup.get(key);
-      if (bucket) bucket.push(item);
-      else lookup.set(key, [item]);
-    }
-  }
-  return lookup;
-}
-
-function buildDisplayName(row, keys) {
-  const f = row[keys.f] || '';
-  const o = keys.o && keys.o !== '__none__' ? row[keys.o] || '' : '';
-  const l = row[keys.l] || '';
-  return `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
-}
-
-function bestFuseResults(fuse, permutations) {
-  let best = [], bestScore = Infinity;
-  for (const q of permutations) {
-    const r = fuse.search(q, { limit: SEARCH_LIMIT });
-    if (r.length > 0 && r[0].score < bestScore) { bestScore = r[0].score; best = r; }
-  }
-  return best;
-}
-
-function tokenOverlapScore(queryTokens, candidateTokens) {
-  if (!queryTokens.length || !candidateTokens.length) return 0;
-  const querySet = new Set(queryTokens);
-  const candidateSet = new Set(candidateTokens);
-  let matches = 0;
-  querySet.forEach(token => {
-    if (candidateSet.has(token)) matches++;
-  });
-  return matches / Math.max(querySet.size, candidateSet.size);
-}
-
-// ─── PHONETIC MATCHING (Soundex) ───────────────────────────────────────────
-// Catches same-sounding, differently-spelled names — e.g. "Mensah"/"Mensa",
-// "Owusu"/"Owusuh", "Asante"/"Asanti", "Boateng"/"Boatin" — that pure
-// edit-distance fuzzy matching can miss when the spelling drifts too far.
-const SOUNDEX_CODES = { B:'1',F:'1',P:'1',V:'1', C:'2',G:'2',J:'2',K:'2',Q:'2',S:'2',X:'2',Z:'2', D:'3',T:'3', L:'4', M:'5',N:'5', R:'6' };
-
-function soundex(token) {
-  const s = String(token || '').toUpperCase().replace(/[^A-Z]/g, '');
-  if (!s) return '';
-  let result = s[0];
-  let prevCode = SOUNDEX_CODES[s[0]] || '';
-  for (let i = 1; i < s.length && result.length < 4; i++) {
-    const c = s[i];
-    const code = SOUNDEX_CODES[c] || '';
-    if (code) {
-      if (code !== prevCode) result += code;
-      prevCode = code;
-    } else if (c !== 'H' && c !== 'W') {
-      prevCode = '';
-    }
-  }
-  return (result + '000').slice(0, 4);
-}
-
-function phoneticTokenOverlapScore(queryTokens, candidateTokens) {
-  if (!queryTokens.length || !candidateTokens.length) return 0;
-  const candidateCodes = new Set(candidateTokens.map(soundex).filter(Boolean));
-  const queryCodes = queryTokens.map(soundex).filter(Boolean);
-  if (!queryCodes.length || !candidateCodes.size) return 0;
-  let matches = 0;
-  new Set(queryCodes).forEach(code => { if (candidateCodes.has(code)) matches++; });
-  return matches / Math.max(new Set(queryCodes).size, candidateCodes.size);
-}
-
-function adjustedResultScore(result, queryTokens) {
-  const fuseScore = 1 - result.score;
-  const candidateTokens = result.item.tokens || tokenizeName(result.item.fullName);
-  const overlap = tokenOverlapScore(queryTokens, candidateTokens);
-  const phoneticOverlap = phoneticTokenOverlapScore(queryTokens, candidateTokens);
-  const queryFirst = queryTokens[0] || '';
-  const queryLast = queryTokens[queryTokens.length - 1] || '';
-  const candFirst = candidateTokens[0] || '';
-  const candLast = candidateTokens[candidateTokens.length - 1] || '';
-  const firstBonus = queryFirst && candFirst === queryFirst ? 0.06
-                    : queryFirst && candFirst && soundex(queryFirst) === soundex(candFirst) ? 0.03 : 0;
-  const lastBonus = queryLast && candLast === queryLast ? 0.08
-                   : queryLast && candLast && soundex(queryLast) === soundex(candLast) ? 0.04 : 0;
-  return Math.min(1, fuseScore * 0.55 + overlap * 0.20 + phoneticOverlap * 0.15 + firstBonus + lastBonus);
-}
-
-function rerankResults(results, queryTokens) {
-  return results
-    .map(result => ({
-      ...result,
-      adjustedScore: adjustedResultScore(result, queryTokens),
-    }))
-    .sort((a, b) => b.adjustedScore - a.adjustedScore);
-}
-
-function chooseBestResults(fuses, permutations, queryTokens, exactLookup) {
-  for (const q of permutations) {
-    const exact = exactLookup.get(q);
-    if (exact && exact.length > 0) {
-      return exact.map(item => ({ item, score: 0, adjustedScore: 1 }));
-    }
-  }
-  const p = bestFuseResults(fuses.fullName, permutations);
-  const w = bestFuseResults(fuses.weighted, permutations);
-  const chosen = (w.length > 0 && (p.length === 0 || w[0].score < p[0].score)) ? w : p;
-  return rerankResults(chosen, queryTokens);
-}
-
-function createFuses(searchList) {
-  return {
-    fullName: new Fuse(searchList, { keys: ['fullName','fullNameRev','tokenSignature'], includeScore: true, threshold: 0.45, ignoreLocation: true }),
-    weighted: new Fuse(searchList, { keys: [{ name:'lastName', weight:0.55 },{ name:'firstName', weight:0.3 },{ name:'tokenSignature', weight:0.15 }], includeScore: true, threshold: 0.45, ignoreLocation: true }),
-  };
-}
-
-// ─── UPLOAD HANDLER ───────────────────────────────────────────────────────────
-function populateSelect(select, headers, autoKeywords) {
-  select.innerHTML = '<option value="">-- Select --</option>';
-  if (select.id.includes('other')) select.innerHTML += '<option value="__none__">(No Column)</option>';
-  headers.forEach(h => {
-    const clean = h.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const opt = document.createElement('option');
-    opt.value = h; opt.text = h;
-    select.appendChild(opt);
-    if (autoKeywords.some(kw => clean.includes(kw))) select.value = h;
-  });
-}
-
-function handleUpload(event, type) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = new Uint8Array(e.target.result);
-    const wb = XLSX.read(data, { type: 'array' });
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-    if (!rows.length) { alert('File is empty!'); return; }
-    const headers = Object.keys(rows[0]);
-    if (type === 'names') {
-      state.nameData = rows;
-      dom.dropNames.classList.add('loaded');
-      dom.labelNames.textContent = file.name;
-      dom.labelNames.style.color = 'var(--green)';
-      dom.labelNames.style.fontWeight = '700';
-      dom.mapNames.classList.remove('hidden');
-      populateSelect(dom.selNFirst, headers, ['first','fname','given']);
-      populateSelect(dom.selNOther, headers, ['other','middle','mname']);
-      populateSelect(dom.selNLast, headers, ['last','lname','surname']);
-      populateSelect(dom.selNSalary, headers, ['salary','basic','wage']);
-      populateSelect(dom.selNTier2, headers, ['tier2','2nd','second','tier_2']);
-    } else {
-      state.masterData = rows;
-      dom.dropMaster.classList.add('loaded');
-      dom.labelMaster.textContent = file.name;
-      dom.labelMaster.style.color = 'var(--green)';
-      dom.labelMaster.style.fontWeight = '700';
-      dom.mapMaster.classList.remove('hidden');
-      populateSelect(dom.selMId, headers, ['id','emp','no','code','member']);
-      populateSelect(dom.selMFirst, headers, ['first','fname','given']);
-      populateSelect(dom.selMOther, headers, ['other','middle','mname']);
-      populateSelect(dom.selMLast, headers, ['last','lname','surname']);
-    }
-    validateForm();
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function validateForm() {
-  const required = [dom.selNFirst, dom.selNLast, dom.selMId, dom.selMFirst, dom.selMLast, dom.selNSalary, dom.selNTier2];
-  const ok = required.every(s => s.value && s.value !== '');
-  dom.btnProcess.disabled = !ok;
-  if (ok) {
-    dom.validationMsg.textContent = 'Ready to compare!';
-    dom.validationMsg.style.color = 'var(--green)';
+    idContent.classList.remove('hidden');
+    listContent.classList.add('hidden');
   } else {
-    dom.validationMsg.textContent = 'Please upload files and map required columns';
-    dom.validationMsg.style.color = 'var(--red)';
+    listBtn.classList.add('active', 'bg-white/5', 'text-slate-300');
+    listBtn.classList.remove('bg-transparent', 'text-slate-400');
+    idBtn.classList.remove('active', 'bg-white/5', 'text-slate-300');
+    idBtn.classList.add('bg-transparent', 'text-slate-400');
+
+    listContent.classList.remove('hidden');
+    idContent.classList.add('hidden');
   }
 }
 
-// ─── MODAL / MANUAL REVIEW ────────────────────────────────────────────────────
-let resolveChoice = null;
-
-function askUserToChoose(searchName, results) {
-  return new Promise(resolve => {
-    resolveChoice = resolve;
-    dom.modalSearchName.textContent = searchName;
-    dom.reviewModal.classList.remove('hidden');
-    dom.modalOptions.innerHTML = '';
-
-    results.slice(0, 8).forEach(r => {
-      const score = parseFloat((r.adjustedScore ?? (1 - r.score)).toFixed(4));
-      const mk = getMasterKeys();
-      const mFirst = r.item.raw[mk.f] || '';
-      const mOther = mk.o && mk.o !== '__none__' ? r.item.raw[mk.o] || '' : '';
-      const mLast  = r.item.raw[mk.l] || '';
-      const fullName = [mFirst, mOther, mLast].filter(Boolean).join(' ');
-      const div = document.createElement('div');
-      div.className = 'match-opt';
-      div.innerHTML = `
-        <div>
-          <div style="font-weight:700;font-size:14px">${fullName}</div>
-          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px">${r.item.id}</div>
-        </div>
-        <span class="pill ${score >= .7 ? 'p-green' : score >= .5 ? 'p-yellow' : 'p-red'}">${(score*100).toFixed(1)}%</span>
-      `;
-      div.addEventListener('click', () => {
-        dom.reviewModal.classList.add('hidden');
-        resolve({ id: r.item.id, name: r.item.fullName, score });
-      });
-      dom.modalOptions.appendChild(div);
-    });
-  });
-}
-
-dom.btnSkip.addEventListener('click', () => {
-  dom.reviewModal.classList.add('hidden');
-  if (resolveChoice) resolveChoice({ id: 'NOT FOUND', name: '-', score: 0 });
-});
-
-function getNameKeys() {
-  return { f: dom.selNFirst.value, o: dom.selNOther.value, l: dom.selNLast.value };
-}
-function getMasterKeys() {
-  return { id: dom.selMId.value, f: dom.selMFirst.value, o: dom.selMOther.value, l: dom.selMLast.value };
-}
-
-// ─── MATCHER ──────────────────────────────────────────────────────────────────
-async function runMatcher() {
-  const nameKeys = getNameKeys(), masterKeys = getMasterKeys();
-  const searchList = createSearchList(state.masterData, masterKeys);
-  const fuses = createFuses(searchList);
-  state.fuseFullName = fuses.fullName;
-  state.fuseWeighted = fuses.weighted;
-  state.exactLookup = buildExactLookup(searchList);
-  state.processedData = [];
-  const autoLimit = parseInt(dom.thresholdSlider.value) / 100;
-  dom.modalThresholdBadge.textContent = `Score < ${dom.thresholdSlider.value}%`;
-
-  for (let i = 0; i < state.nameData.length; i++) {
-    const sourceRow = state.nameData[i];
-    const displayName = buildDisplayName(sourceRow, nameKeys);
-    const perms = namePermutations(sourceRow[nameKeys.f], sourceRow[nameKeys.o], sourceRow[nameKeys.l]);
-    const queryTokens = tokenizeName(displayName);
-    const results = chooseBestResults(fuses, perms, queryTokens, state.exactLookup);
-    let match = { id: 'NOT FOUND', name: '-', score: 0, type: 'notfound' };
-
-    if (results.length > 0) {
-      const topScore = parseFloat((results[0].adjustedScore ?? (1 - results[0].score)).toFixed(4));
-      if (topScore >= autoLimit) {
-        match = { id: results[0].item.id, name: results[0].item.fullName, score: topScore, type: 'auto' };
-      } else {
-        dom.queueCounter.textContent = `Row ${i+1} of ${state.nameData.length}`;
-        const chosen = await askUserToChoose(displayName, results);
-        match = { ...chosen, type: chosen.id === 'NOT FOUND' ? 'notfound' : 'manual' };
-      }
-    }
-
-    // Pull the original name parts from the source row for the output file
-    state.processedData.push({
-      'Name List Name': displayName,
-      'Found ID': match.id,
-      'Master List Name': match.name,
-      'Confidence': match.score > 0 ? `${(match.score*100).toFixed(1)}%` : '-',
-      _matchType: match.type,
-      _row: sourceRow,
-    });
-
-    // Update progress
-    const pct = Math.round(((i+1) / state.nameData.length) * 100);
-    dom.progressBar.style.width = pct + '%';
-    dom.progressText.textContent = pct + '%';
-    if (i % 50 === 0) await new Promise(r => setTimeout(r, 0));
-  }
-  return state.processedData;
-}
-
-async function reviewNotFound() {
-  const notFoundRows = state.processedData.filter(r => r._matchType === 'notfound');
-  if (!notFoundRows.length) return;
-  const nameKeys = getNameKeys();
-
-  for (let i = 0; i < notFoundRows.length; i++) {
-    const row = notFoundRows[i];
-    const perms = namePermutations(
-      row._row[nameKeys.f] || '',
-      nameKeys.o !== '__none__' ? row._row[nameKeys.o] : '',
-      row._row[nameKeys.l] || ''
-    );
-    const queryTokens = tokenizeName(row['Name List Name']);
-    const results = chooseBestResults({ fullName: state.fuseFullName, weighted: state.fuseWeighted }, perms, queryTokens, state.exactLookup);
-    dom.queueCounter.textContent = `Not Found ${i+1} of ${notFoundRows.length}`;
-    const chosen = await askUserToChoose(row['Name List Name'], results);
-    const idx = state.processedData.indexOf(row);
-    if (idx !== -1) {
-      state.processedData[idx]['Found ID'] = chosen.id;
-      state.processedData[idx]['Master List Name'] = chosen.name;
-      state.processedData[idx]['Confidence'] = chosen.score > 0 ? `${(chosen.score*100).toFixed(1)}%` : '-';
-      state.processedData[idx]._matchType = chosen.id === 'NOT FOUND' ? 'notfound' : 'manual';
-    }
-  }
-  renderResults();
-}
-
-// ─── RENDER RESULTS ───────────────────────────────────────────────────────────
-function renderResults() {
-  const auto   = state.processedData.filter(r => r._matchType === 'auto').length;
-  const manual = state.processedData.filter(r => r._matchType === 'manual').length;
-  const nf     = state.processedData.filter(r => r._matchType === 'notfound').length;
-
-  dom.statMatched.textContent = auto;
-  dom.statManual.textContent = manual;
-  dom.statNotFound.textContent = nf;
-  dom.resultCount.textContent = `${state.processedData.length} records processed`;
-
-  dom.btnReviewNotFound.classList.toggle('hidden', nf === 0);
-  dom.btnReviewLabel.textContent = `Review Not Found (${nf})`;
-  dom.resultsArea.classList.remove('hidden');
-
-  filterTable();
-}
-
-function filterTable() {
-  const q = dom.tableFilter.value.toLowerCase();
-  const status = dom.tableFilterStatus.value;
-  const filtered = state.processedData.filter(r => {
-    const matchQ = !q || r['Name List Name'].toLowerCase().includes(q) || r['Found ID'].toLowerCase().includes(q);
-    const matchS = status === 'all' || (status === 'found' && r._matchType !== 'notfound') || (status === 'notfound' && r._matchType === 'notfound');
-    return matchQ && matchS;
-  });
-
-  dom.tableBody.innerHTML = filtered.map(r => `
-    <tr>
-      <td style="font-weight:600">${r['Name List Name']}</td>
-      <td class="mono" style="font-size:12px">${r['Found ID']}</td>
-      <td style="color:var(--muted);font-size:12px">${r['Master List Name']}</td>
-      <td><span class="pill ${r._matchType==='notfound'?'p-red':r._matchType==='auto'?'p-green':'p-blue'}">${r['Confidence']}</span></td>
-      <td><span class="pill ${r._matchType==='auto'?'p-green':r._matchType==='manual'?'p-blue':'p-red'}">${r._matchType==='auto'?'Auto':r._matchType==='manual'?'Manual':'Not Found'}</span></td>
-    </tr>
-  `).join('');
-  dom.filterCount.textContent = `Showing ${filtered.length} of ${state.processedData.length}`;
-}
-
-// ─── DOWNLOAD: MATCH RESULTS (original format) ───────────────────────────────
-function downloadMatchResults() {
-  const rows = state.processedData.map(r => ({
-    'Name List Name': r['Name List Name'],
-    'Found ID': r['Found ID'],
-    'Master List Name': r['Master List Name'],
-    'Confidence': r['Confidence'],
-    'Status': r._matchType === 'auto' ? 'Auto' : r._matchType === 'manual' ? 'Manual' : 'Not Found',
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
+// ─── DYNAMIC EXCEL TEMPLATE GENERATION ─────────────────────────────────────
+function downloadTemplate(type) {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Match Results');
-  XLSX.writeFile(wb, 'Match_Results.xlsx');
-}
+  let data = [];
+  let filename = "";
 
-// ─── DOWNLOAD: FANTEAKWA SUBMISSION FILE ─────────────────────────────────────
-//
-// HOW THE OUTPUT IS BUILT — column by column:
-//
-//  Branch            → from cfg-branch input (same for every row)
-//  National ID       → blank (not available from source data)
-//  Membership ID     → "Found ID" from the matcher (the matched ID from master list)
-//  First Name        → from the NAME LIST file, first-name column
-//  Other Names       → from the NAME LIST file, other-name column
-//  Surname           → from the NAME LIST file, last-name column
-//  SSNIT I.D.        → blank (not in source data — user fills manually if needed)
-//  Date of Birth     → blank
-//  Start Date        → blank
-//  Cycle Date        → from cfg-cycle input (same for every row)
-//  Basic Salary      → from cfg-salary input (same for every row)
-//  2nd Tier          → from cfg-tier2 input (same for every row)
-//  3rd Tier ER       → from cfg-tier3er input (same for every row)
-//  3rd Tier EE       → from cfg-tier3ee input (same for every row)
-//  Management Unit   → same as Branch (from cfg-branch input)
-//  Investment Date   → from cfg-invest input (same for every row)
-//  Region            → from cfg-region input (same for every row)
-//
-// Rows where Found ID = "NOT FOUND" are included but highlighted so the user
-// can see which records still need attention.
-//
-function downloadFanteakwaFile() {
-  const nameKeys = getNameKeys();
-  const branch  = dom.cfgBranch.value.trim() || '';
-  const region  = dom.cfgRegion.value.trim() || '';
-  const cycle   = dom.cfgCycle.value.trim()  || '';
-  const invest  = dom.cfgInvest.value.trim() || '';
-  const outputName = dom.cfgOutputName.value.trim();
-  const salarCol = dom.selNSalary.value;
-  const tier2Col = dom.selNTier2.value;
-
-  const headers = [
-    'Branch','National ID','Membership ID','First Name','Other Names','Surname',
-    'SSNIT I.D.','Date of Birth (M/D/YYYY)','Start Date (M/D/YYYY)','Cycle Date (M/D/YYYY)',
-    'Basic Salary','2nd Tier','3rd Tier ER','3rd Tier EE',
-    'Management Unit','Investment Date (M/D/YYYY)','Region'
-  ];
-
-  const rows = state.processedData.map(r => {
-    const src = r._row || {};
-    const firstName  = String(src[nameKeys.f]  || '').trim();
-    const otherNames = nameKeys.o && nameKeys.o !== '__none__' ? String(src[nameKeys.o] || '').trim() : '';
-    const surname    = String(src[nameKeys.l]  || '').trim();
-    // Read salary and 2nd tier from the source row's own columns
-    const salary = parseFloat(src[salarCol]) || 0;
-    const tier2  = parseFloat(src[tier2Col])  || 0;
-
-    return {
-      'Branch':                      branch,
-      'National ID':                 '',
-      'Membership ID':               r['Found ID'],
-      'First Name':                  firstName,
-      'Other Names':                 otherNames,
-      'Surname':                     surname,
-      'SSNIT I.D.':                  '',
-      'Date of Birth (M/D/YYYY)':    '',
-      'Start Date (M/D/YYYY)':       '',
-      'Cycle Date (M/D/YYYY)':       cycle,
-      'Basic Salary':                salary,
-      '2nd Tier':                    tier2,
-      '3rd Tier ER':                 0,
-      '3rd Tier EE':                 0,
-      'Management Unit':             branch,
-      'Investment Date (M/D/YYYY)':  invest,
-      'Region':                      region,
-    };
-  });
-
-  // Build workbook
-  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
-
-  // Highlight NOT FOUND rows in light red
-  rows.forEach((row, rowIdx) => {
-    if (row['Membership ID'] === 'NOT FOUND') {
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const cellAddr = XLSX.utils.encode_cell({ r: rowIdx + 1, c: C });
-        if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
-        ws[cellAddr].s = {
-          fill: { fgColor: { rgb: 'FEE2E2' } },
-          font: { color: { rgb: 'B91C1C' } },
-        };
+  if (type === 'id') {
+    filename = "Hedge_Member_ID_List_Template.xlsx";
+    data = [
+      {
+        "Member ID": "HP-1001",
+        "First Name": "John",
+        "Other Name": "Kofi",
+        "Last Name": "Mensah",
+        "National ID": "GHA-001234567-1",
+        "SSNIT ID": "3456789012"
+      },
+      {
+        "Member ID": "HP-1002",
+        "First Name": "Ama",
+        "Other Name": "",
+        "Last Name": "Osei",
+        "National ID": "GHA-009876543-2",
+        "SSNIT ID": "9876543210"
+      },
+      {
+        "Member ID": "HP-1003",
+        "First Name": "David",
+        "Other Name": "Kwame",
+        "Last Name": "Boateng",
+        "National ID": "GHA-005544332-9",
+        "SSNIT ID": "5544332211"
       }
-    }
-  });
+    ];
+  } else if (type === 'list') {
+    filename = "Hedge_Schedule_Names_List_Template.xlsx";
+    data = [
+      {
+        "First Name": "John",
+        "Other Name": "K.",
+        "Last Name": "Mensa",
+        "Basic Salary": 1500.00,
+        "2nd Tier": 75.00,
+        "National ID": "GHA-001234567-1",
+        "SSNIT ID": "3456789012"
+      },
+      {
+        "First Name": "Ama",
+        "Other Name": "",
+        "Last Name": "Osei",
+        "Basic Salary": 2200.00,
+        "2nd Tier": 110.00,
+        "National ID": "GHA-009876543-2",
+        "SSNIT ID": "9876543210"
+      },
+      {
+        "First Name": "David",
+        "Other Name": "Kwame",
+        "Last Name": "Boatin",
+        "Basic Salary": 1850.50,
+        "2nd Tier": 92.53,
+        "National ID": "",
+        "SSNIT ID": ""
+      }
+    ];
+  }
 
-  // Set column widths to match Fanteakwa format
+  const ws = XLSX.utils.json_to_sheet(data);
+  
+  // Apply visual column formatting
   ws['!cols'] = [
-    { wch: 36 }, // Branch
-    { wch: 14 }, // National ID
-    { wch: 16 }, // Membership ID
-    { wch: 14 }, // First Name
-    { wch: 14 }, // Other Names
-    { wch: 16 }, // Surname
-    { wch: 18 }, // SSNIT I.D.
-    { wch: 20 }, // DOB
-    { wch: 20 }, // Start Date
-    { wch: 20 }, // Cycle Date
-    { wch: 13 }, // Basic Salary
-    { wch: 10 }, // 2nd Tier
-    { wch: 11 }, // 3rd Tier ER
-    { wch: 11 }, // 3rd Tier EE
-    { wch: 36 }, // Management Unit
-    { wch: 22 }, // Investment Date
-    { wch: 16 }, // Region
+    { wch: 18 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 22 },
+    { wch: 16 }
   ];
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-
-  function safeFileName(name) {
-    return String(name || '')
-      .replace(/[\/:*?"<>|]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  // Generate filename with today's date and branch name
-  const today = new Date();
-  const monthNames = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
-  const monthName = monthNames[today.getMonth()];
-  const yyyy = today.getFullYear();
-  const safeBranch = branch.replace(/[\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
-  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${yyyy}.xlsx`;
-  const sanitizedOutputName = outputName ? safeFileName(outputName) : '';
-  const customName = sanitizedOutputName ? `${sanitizedOutputName}.xlsx` : fallbackName;
-  XLSX.writeFile(wb, customName);
+  XLSX.utils.book_append_sheet(wb, ws, "Template");
+  XLSX.writeFile(wb, filename);
 }
-
-// ─── MAIN PROCESS ─────────────────────────────────────────────────────────────
-async function handleRunMatcher() {
-  dom.btnProcess.disabled = true;
-  dom.validationMsg.textContent = '';
-  dom.progressContainer.classList.remove('hidden');
-  dom.progressBar.style.width = '0%';
-  dom.progressText.textContent = '0%';
-  dom.resultsArea.classList.add('hidden');
-
-  await runMatcher();
-
-  dom.progressText.textContent = 'Complete!';
-  renderResults();
-  dom.btnProcess.disabled = false;
-  setTimeout(() => dom.progressContainer.classList.add('hidden'), 3000);
-}
-
-// ─── EVENTS ───────────────────────────────────────────────────────────────────
-dom.inputNames.addEventListener('change', e => handleUpload(e, 'names'));
-dom.inputMaster.addEventListener('change', e => handleUpload(e, 'master'));
-dom.btnProcess.addEventListener('click', handleRunMatcher);
-dom.btnDownloadMatch.addEventListener('click', downloadMatchResults);
-dom.btnDownloadFanteakwa.addEventListener('click', downloadFanteakwaFile);
-dom.btnReviewNotFound.addEventListener('click', async () => {
-  dom.btnReviewNotFound.disabled = true;
-  dom.btnReviewLabel.textContent = 'Reviewing…';
-  await reviewNotFound();
-  dom.btnReviewNotFound.disabled = false;
-  validateForm();
-});
-dom.thresholdSlider.addEventListener('input', () => {
-  dom.thresholdVal.textContent = dom.thresholdSlider.value + '%';
-});
-dom.tableFilter.addEventListener('input', filterTable);
-dom.tableFilterStatus.addEventListener('change', filterTable);
-[dom.selNFirst,dom.selNOther,dom.selNLast,dom.selNSalary,dom.selNTier2,dom.selMId,dom.selMFirst,dom.selMOther,dom.selMLast]
-  .forEach(s => s.addEventListener('change', validateForm));
-
-validateForm();
 </script>
 </body>
 </html>

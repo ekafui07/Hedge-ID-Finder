@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hedge Pensions — Smart Matcher</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #06090e;
+  --card-bg: linear-gradient(135deg, rgba(22, 30, 43, 0.7) 0%, rgba(11, 16, 23, 0.9) 100%);
+  --accent: #e8924a;
+  --accent-light: #ffb574;
+  --border: rgba(255, 255, 255, 0.05);
+  --border2: rgba(255, 255, 255, 0.1);
+  --border-focus: rgba(232, 146, 74, 0.35);
+  --green: #10b981;
+  --green-light: #34d399;
+  --blue: #3b82f6;
+  --blue-light: #60a5fa;
+  --red: #ef4444;
+  --red-light: #f87171;
+  --yellow: #f59e0b;
+  --yellow-light: #fbbf24;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --faint: rgba(255, 255, 255, 0.03);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  font-size:14px;
+  position:relative;
+  overflow-x:hidden;
+}
+h1, h2, h3, h4 {
+  font-family: 'Outfit', sans-serif;
+}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* Grid background pattern */
+.bg-mesh {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Glowing decorative shapes */
+.glow-orb-orange {
+  position: absolute;
+  top: -120px;
+  right: -100px;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(232, 146, 74, 0.08) 0%, transparent 65%);
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(40px);
+  animation: float-slow 15s infinite alternate ease-in-out;
+}
+
+.glow-orb-blue {
+  position: absolute;
+  bottom: 100px;
+  left: -200px;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 65%);
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(45px);
+  animation: float-slow 20s infinite alternate-reverse ease-in-out;
+}
+
+@keyframes float-slow {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(30px) scale(1.05); }
+}
+
+/* Layout elements */
+.app-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 16px 64px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+  z-index: 10;
+}
+.nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+  margin-bottom: 12px;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+.nav-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(232, 146, 74, 0.25);
+}
+.nav-title {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #fff;
+}
+.nav-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 800;
+  color: var(--accent);
+  background: rgba(232, 146, 74, 0.1);
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid rgba(232, 146, 74, 0.15);
+}
+.hero-section {
+  text-align: center;
+  margin-bottom: 12px;
+}
+.hero-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #fff 40%, rgba(255,255,255,0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.accent-plus {
+  color: var(--accent);
+  background: none;
+  -webkit-text-fill-color: initial;
+}
+.hero-subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* Responsive Grid layouts */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media(max-width:768px){
+  .grid-2 { grid-template-columns:1fr; }
+}
+
+/* Premium glass cards */
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 10;
+}
+.card:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px -15px rgba(0,0,0,0.7);
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+.card-sm {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  transition: all 0.25s ease;
+}
+.card-sm:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Drop zones */
+.drop-zone {
+  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  text-align: center;
+  height: 110px;
+}
+.drop-zone:hover {
+  border-color: var(--accent);
+  background: rgba(232, 146, 74, 0.03);
+  transform: translateY(-2px);
+}
+.drop-zone svg {
+  color: var(--muted);
+  transition: all 0.3s ease;
+}
+.drop-zone:hover svg {
+  color: var(--accent-light);
+  transform: translateY(-2px);
+}
+.drop-zone.loaded {
+  border-color: var(--green);
+  background: rgba(16, 185, 129, 0.04);
+}
+.drop-zone.loaded svg {
+  color: var(--green);
+}
+.drop-zone.loaded:hover {
+  border-color: var(--green-light);
+  background: rgba(16, 185, 129, 0.07);
+}
+.drop-zone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.drop-zone-text {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.drop-zone:hover .drop-zone-text {
+  color: var(--text);
+}
+
+/* Column mapping elements */
+.mapping-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.mapping-span-2 {
+  grid-column: span 2;
+}
+@media(max-width: 500px) {
+  .mapping-grid { grid-template-columns: 1fr; }
+  .mapping-span-2 { grid-column: span 1; }
+}
+
+/* Fields */
+label.field {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+select, input[type=text], input[type=number], input[type=date] {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+select:focus, input:focus {
+  border-color: var(--border-focus);
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 15px rgba(232, 146, 74, 0.15);
+}
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%2394a3b8' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+}
+input[type=date] {
+  color-scheme: dark;
+}
+input[type=date]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) brightness(1.2);
+  cursor: pointer;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+.btn:active {
+  transform: scale(.96);
+}
+.btn:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.btn-orange {
+  background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+  color: #070a0f;
+  box-shadow: 0 4px 15px rgba(232, 146, 74, 0.2);
+}
+.btn-orange:not(:disabled):hover {
+  box-shadow: 0 6px 25px rgba(232, 146, 74, 0.4);
+  transform: translateY(-1px);
+}
+.btn-green {
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-light) 100%);
+  color: #070a0f;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+}
+.btn-green:not(:disabled):hover {
+  box-shadow: 0 6px 25px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+.btn-blue {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+}
+.btn-blue:not(:disabled):hover {
+  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.btn-ghost:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: .02em;
+}
+.p-green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.p-blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+.p-red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.p-orange {
+  background: rgba(232, 146, 74, 0.1);
+  color: #ffb574;
+  border: 1px solid rgba(232, 146, 74, 0.2);
+}
+.p-yellow {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Step badges */
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+  color: #070a0f;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 0 15px rgba(232, 146, 74, 0.25);
+}
+
+/* Output Config Section */
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media(max-width:600px){
+  .config-grid { grid-template-columns:1fr; }
+}
+.filename-row {
+  margin-top: 16px;
+}
+
+/* Info banners */
+.info-strip {
+  background: rgba(59, 130, 246, 0.04);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 12.5px;
+  color: #93c5fd;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.info-strip svg {
+  color: var(--blue-light);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Slider (Range) */
+input[type=range] {
+  -webkit-appearance: none;
+  background: rgba(255,255,255,0.05);
+  height: 6px;
+  border-radius: 99px;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(232, 146, 74, 0.4);
+  transition: transform 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Progress bar */
+.progress-track {
+  background: rgba(255,255,255,0.04);
+  border-radius: 99px;
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue) 0%, var(--blue-light) 100%);
+  border-radius: 99px;
+  transition: width .15s;
+}
+
+/* Results section elements */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media(max-width: 600px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
+.stat-card {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 14px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+}
+.stat-card.sc-green::before { background: var(--green); }
+.stat-card.sc-blue::before { background: var(--blue); }
+.stat-card.sc-red::before { background: var(--red); }
+.stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.action-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media(max-width: 480px) {
+  .filter-bar { flex-direction: column; }
+}
+
+.table-container {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-height: 480px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Custom table rules */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13.5px;
+}
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #0f141c;
+}
+th {
+  padding: 14px 18px;
+  text-align: left;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+td {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+  transition: all 0.15s ease;
+}
+tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* Modal layout components */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 5, 8, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal {
+  background: linear-gradient(135deg, rgba(26, 36, 52, 0.95) 0%, rgba(13, 20, 30, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 540px;
+  padding: 32px;
+}
+.match-opt {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.match-opt:hover {
+  border-color: var(--accent);
+  background: rgba(232, 146, 74, 0.03);
+  transform: translateX(4px);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+.modal-title {
+  font-weight: 800;
+  font-size: 16px;
+  color: #fff;
+}
+.modal-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.modal-search-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.modal-search-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+.modal-search-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent-light);
+}
+.modal-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 10px;
+}
+.modal-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.hidden {
+  display: none !important;
+}
+</style>
+</head>
+
+<body>
+<div class="bg-mesh"></div>
+<div class="glow-orb-orange"></div>
+<div class="glow-orb-blue"></div>
+
+<div class="app-container">
+
+  <!-- Navigation Header -->
+  <header class="nav-header">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-logo">
+        <svg width="20" height="20" fill="none" stroke="#070a0f" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="nav-title">Hedge Pensions</span>
+    </a>
+    <div class="nav-badge">
+      Smart Matcher Tool
+    </div>
+  </header>
+
+  <!-- Hero Title -->
+  <div class="hero-section">
+    <h1 class="hero-title">Smart Matcher <span class="accent-plus">+</span> Schedule Generator</h1>
+    <p class="hero-subtitle">Reconcile name mismatch issues and generate pension schedule files effortlessly.</p>
+  </div>
+
+  <!-- STEP 1: Upload files -->
+  <div class="card">
+    <div class="card-header">
+      <span class="step-num">1</span>
+      <h2 class="card-title">Upload &amp; Map Datasets</h2>
+    </div>
+
+    <div class="grid-2">
+      <!-- Name List Upload & Mapping -->
+      <div>
+        <div class="card-sm" style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">SCHEDULE NAMES LIST</div>
+          <div class="drop-zone" id="drop-names">
+            <input type="file" id="input-names" accept=".xlsx,.xls">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="label-names" class="drop-zone-text">Click to upload spreadsheet</span>
+          </div>
+        </div>
+        
+        <div id="map-names" class="hidden card-sm" style="display:flex;flex-direction:column;gap:12px">
+          <div class="mapping-grid">
+            <div><label class="field">First Name *</label><select id="sel-n-first"></select></div>
+            <div><label class="field">Last Name *</label><select id="sel-n-last"></select></div>
+            <div class="mapping-span-2"><label class="field">Other Name</label><select id="sel-n-other"></select></div>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+          <div class="mapping-grid">
+            <div><label class="field">Basic Salary *</label><select id="sel-n-salary"></select></div>
+            <div><label class="field">2nd Tier *</label><select id="sel-n-tier2"></select></div>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+          <div class="mapping-grid">
+            <div><label class="field">National ID</label><select id="sel-n-natid"></select></div>
+            <div><label class="field">SSNIT ID</label><select id="sel-n-ssnit"></select></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Master List Upload & Mapping -->
+      <div>
+        <div class="card-sm" style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">MEMBER ID LIST (MASTER)</div>
+          <div class="drop-zone" id="drop-master">
+            <input type="file" id="input-master" accept=".xlsx,.xls">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="label-master" class="drop-zone-text">Click to upload reference database</span>
+          </div>
+        </div>
+        
+        <div id="map-master" class="hidden card-sm" style="display:flex;flex-direction:column;gap:12px">
+          <div class="mapping-grid">
+            <div class="mapping-span-2"><label class="field">ID Column *</label><select id="sel-m-id"></select></div>
+            <div><label class="field">First Name *</label><select id="sel-m-first"></select></div>
+            <div><label class="field">Last Name *</label><select id="sel-m-last"></select></div>
+            <div class="mapping-span-2"><label class="field">Other Name</label><select id="sel-m-other"></select></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Output File Settings -->
+  <div class="card" id="output-config-panel">
+    <div class="card-header" style="margin-bottom:12px">
+      <span class="step-num">2</span>
+      <h2 class="card-title">Output File Settings</h2>
+      <span class="pill p-blue" style="margin-left:auto">Auto-fill submission template</span>
+    </div>
+    <p style="color:var(--muted);font-size:12.5px;margin-bottom:20px;line-height:1.4">These parameters apply globally to all records in your generated schedule, simplifying batch preparation.</p>
+
+    <div class="info-strip">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01" stroke-linecap="round"/></svg>
+      <span><strong>Membership ID</strong>, <strong>First Name</strong>, <strong>Other Names</strong>, <strong>Surname</strong>, <strong>Basic Salary</strong>, <strong>2nd Tier</strong>, <strong>National ID</strong> and <strong>SSNIT ID</strong> are read per-row from your Name List file. <strong>3rd Tier ER</strong> and <strong>3rd Tier EE</strong> default to 0. Everything below is batch metadata set once.</span>
+    </div>
+
+    <div class="config-grid">
+      <div><label class="field">Branch / Management Unit</label><input type="text" id="cfg-branch" value="FANTEAKWA NORTH DISTRICT ASSEMBLY" placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY"></div>
+      <div><label class="field">Region</label><input type="text" id="cfg-region" value="EASTERN REGION" placeholder="e.g. EASTERN REGION"></div>
+      <div><label class="field">Cycle Date</label><input type="date" id="cfg-cycle" value=""></div>
+      <div><label class="field">Investment Date</label><input type="date" id="cfg-invest" value=""></div>
+    </div>
+    <div class="filename-row">
+      <label class="field">Output File Name</label>
+      <input type="text" id="cfg-output-name" value="" placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY OCTOBER 2026">
+    </div>
+  </div>
+
+  <!-- STEP 3: Match & Generate -->
+  <div class="card">
+    <div class="card-header">
+      <span class="step-num">3</span>
+      <h2 class="card-title">Run Reconciliation</h2>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:24px">
+      <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:8px">
+        <label class="field" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Auto-match confidence threshold</span>
+          <span id="threshold-val" class="pill p-orange">80%</span>
+        </label>
+        <input type="range" id="threshold" min="50" max="100" value="80" style="width:100%">
+      </div>
+      <button id="btn-process" class="btn btn-orange" disabled style="padding:14px 28px">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Run Comparison
+      </button>
+    </div>
+
+    <div id="progress-container" class="hidden" style="margin-top:20px">
+      <div class="progress-track"><div id="progress-bar" class="progress-fill" style="width:0%"></div></div>
+      <p id="progress-text" class="mono" style="font-size:12px;text-align:center;color:var(--muted);margin-top:8px">0%</p>
+    </div>
+    <p id="validation-msg" style="font-size:13px;color:var(--red);margin-top:12px;text-align:center;font-weight:500">Please upload files and map the required columns</p>
+  </div>
+
+  <!-- Results Dashboard -->
+  <div id="results-area" class="card hidden">
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card sc-green">
+        <div id="stat-matched" style="font-size:32px;font-weight:800;color:var(--green)" class="mono">0</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">Auto matched</div>
+      </div>
+      <div class="stat-card sc-blue">
+        <div id="stat-manual" style="font-size:32px;font-weight:800;color:var(--blue)" class="mono">0</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">Manually matched</div>
+      </div>
+      <div class="stat-card sc-red">
+        <div id="stat-notfound" style="font-size:32px;font-weight:800;color:var(--red)" class="mono">0</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">Not found</div>
+      </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar">
+      <div class="action-title" id="result-count">Results</div>
+      <div class="action-buttons">
+        <button id="btn-review-notfound" class="btn btn-ghost hidden">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12H9m0 0l3-3m-3 3l3 3M3 12a9 9 0 1118 0A9 9 0 013 12z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="btn-review-notfound-label">Review Not Found</span>
+        </button>
+        <button id="btn-download-match" class="btn btn-ghost">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Match Results
+        </button>
+        <button id="btn-download-fanteakwa" class="btn btn-green">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download Submission File
+        </button>
+      </div>
+    </div>
+
+    <!-- Output preview banner -->
+    <div class="info-strip" style="margin-bottom:16px">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>The <strong>Download Submission File</strong> button generates a ready-to-submit Excel file in the exact format — Branch, National ID, Membership ID, First Name, Other Names, Surname, SSNIT I.D., dates, salary, tiers, Management Unit, Investment Date, Region — fully pre-filled.</span>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <input type="text" id="table-filter" placeholder="Search by name or ID…" style="flex:1">
+      <select id="table-filter-status" style="width:auto;min-width:140px">
+        <option value="all">All Records</option>
+        <option value="found">Matched Only</option>
+        <option value="notfound">Not Found Only</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Name List Name</th>
+            <th>Found ID</th>
+            <th>Master Record Name</th>
+            <th>Confidence</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <p id="filter-count" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:right"></p>
+  </div>
+
+</div>
+
+<!-- Review Modal -->
+<div id="review-modal" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Manual Review</span>
+      <span id="modal-threshold-badge" class="pill p-yellow">Score &lt; 80%</span>
+    </div>
+    <p class="modal-subtitle">Confirm the correct master database match for the employee name below:</p>
+    
+    <div class="modal-search-box">
+      <div class="modal-search-label">Searching For Record</div>
+      <strong id="modal-search-name" class="modal-search-val"></strong>
+    </div>
+    
+    <p class="modal-section-title">Potential Matches</p>
+    <div id="modal-options" class="modal-options-list"></div>
+    
+    <div class="modal-footer">
+      <span id="queue-counter" style="font-size:12px;color:var(--muted);font-weight:500"></span>
+      <button id="btn-skip" class="btn btn-ghost" style="padding:10px 20px;font-size:12.5px">No Match / Skip</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  nameData: [],
+  masterData: [],
+  processedData: [],
+  fuseFullName: null,
+  fuseWeighted: null,
+  exactLookup: null,
+};
+
+// ─── DOM REFS ─────────────────────────────────────────────────────────────────
+const dom = {
+  inputNames: document.getElementById('input-names'),
+  inputMaster: document.getElementById('input-master'),
+  dropNames: document.getElementById('drop-names'),
+  dropMaster: document.getElementById('drop-master'),
+  labelNames: document.getElementById('label-names'),
+  labelMaster: document.getElementById('label-master'),
+  mapNames: document.getElementById('map-names'),
+  mapMaster: document.getElementById('map-master'),
+  selNFirst: document.getElementById('sel-n-first'),
+  selNOther: document.getElementById('sel-n-other'),
+  selNLast: document.getElementById('sel-n-last'),
+  selNSalary: document.getElementById('sel-n-salary'),
+  selNTier2: document.getElementById('sel-n-tier2'),
+  selNNatId: document.getElementById('sel-n-natid'),
+  selNSsnit: document.getElementById('sel-n-ssnit'),
+  selMId: document.getElementById('sel-m-id'),
+  selMFirst: document.getElementById('sel-m-first'),
+  selMOther: document.getElementById('sel-m-other'),
+  selMLast: document.getElementById('sel-m-last'),
+  btnProcess: document.getElementById('btn-process'),
+  btnDownloadMatch: document.getElementById('btn-download-match'),
+  btnDownloadFanteakwa: document.getElementById('btn-download-fanteakwa'),
+  btnReviewNotFound: document.getElementById('btn-review-notfound'),
+  btnReviewLabel: document.getElementById('btn-review-notfound-label'),
+  btnSkip: document.getElementById('btn-skip'),
+  thresholdSlider: document.getElementById('threshold'),
+  thresholdVal: document.getElementById('threshold-val'),
+  progressContainer: document.getElementById('progress-container'),
+  progressBar: document.getElementById('progress-bar'),
+  progressText: document.getElementById('progress-text'),
+  validationMsg: document.getElementById('validation-msg'),
+  resultsArea: document.getElementById('results-area'),
+  resultCount: document.getElementById('result-count'),
+  statMatched: document.getElementById('stat-matched'),
+  statManual: document.getElementById('stat-manual'),
+  statNotFound: document.getElementById('stat-notfound'),
+  tableBody: document.getElementById('table-body'),
+  tableFilter: document.getElementById('table-filter'),
+  tableFilterStatus: document.getElementById('table-filter-status'),
+  filterCount: document.getElementById('filter-count'),
+  reviewModal: document.getElementById('review-modal'),
+  modalSearchName: document.getElementById('modal-search-name'),
+  modalOptions: document.getElementById('modal-options'),
+  modalThresholdBadge: document.getElementById('modal-threshold-badge'),
+  queueCounter: document.getElementById('queue-counter'),
+  // Output config
+  cfgBranch: document.getElementById('cfg-branch'),
+  cfgRegion: document.getElementById('cfg-region'),
+  cfgCycle: document.getElementById('cfg-cycle'),
+  cfgInvest: document.getElementById('cfg-invest'),
+  cfgOutputName: document.getElementById('cfg-output-name'),
+};
+
+// ─── MATCHING LOGIC ───────────────────────────────────────────────────────────
+const HONORIFICS = /^(mr|mrs|ms|miss|dr|prof|rev|hon|sir|lady|capt|col|sgt|cpl|pvt|eng|esq)\.?\s+/gi;
+const NAME_SUFFIXES = /\b(jr|sr|ii|iii|iv|v)\b\.?/gi;
+const SEARCH_LIMIT = 10;
+
+function stripDiacritics(text) {
+  return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function normalizeName(name) {
+  return stripDiacritics(String(name || '').toLowerCase())
+    .replace(HONORIFICS, '')
+    .replace(NAME_SUFFIXES, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenizeName(name) {
+  return normalizeName(name).split(' ').filter(Boolean);
+}
+
+function tokenSignature(tokens) {
+  return [...new Set(tokens)].sort().join(' ');
+}
+
+function namePermutations(first, other, last) {
+  const f = normalizeName(first), o = normalizeName(other), l = normalizeName(last);
+  const tokens = [f, o, l].filter(Boolean).join(' ').split(' ').filter(Boolean);
+  return [...new Set([
+    [f, o, l].filter(Boolean).join(' '),
+    [f, l].filter(Boolean).join(' '),
+    [l, f, o].filter(Boolean).join(' '),
+    [l, f].filter(Boolean).join(' '),
+    tokens.join(' '),
+    tokenSignature(tokens),
+  ])].filter(Boolean);
+}
+
+function createSearchList(masterRows, masterKeys) {
+  return masterRows.map(row => {
+    const first = row[masterKeys.f] || '';
+    const other = masterKeys.o && masterKeys.o !== '__none__' ? row[masterKeys.o] || '' : '';
+    const last = row[masterKeys.l] || '';
+    const nf = normalizeName(first), no = normalizeName(other), nl = normalizeName(last);
+    const tokens = [nf, no, nl].filter(Boolean).join(' ').split(' ').filter(Boolean);
+    return {
+      id: row[masterKeys.id],
+      fullName: [nf, no, nl].filter(Boolean).join(' '),
+      fullNameRev: [nl, nf, no].filter(Boolean).join(' '),
+      tokenSignature: tokenSignature(tokens),
+      firstName: nf, lastName: nl,
+      tokens,
+      raw: row,
+    };
+  });
+}
+
+function buildExactLookup(searchList) {
+  const lookup = new Map();
+  for (const item of searchList) {
+    for (const key of [item.fullName, item.fullNameRev, item.tokenSignature]) {
+      if (!key) continue;
+      const bucket = lookup.get(key);
+      if (bucket) bucket.push(item);
+      else lookup.set(key, [item]);
+    }
+  }
+  return lookup;
+}
+
+function buildDisplayName(row, keys) {
+  const f = row[keys.f] || '';
+  const o = keys.o && keys.o !== '__none__' ? row[keys.o] || '' : '';
+  const l = row[keys.l] || '';
+  return `${f} ${o} ${l}`.replace(/\s+/g, ' ').trim();
+}
+
+function bestFuseResults(fuse, permutations) {
+  let best = [], bestScore = Infinity;
+  for (const q of permutations) {
+    const r = fuse.search(q, { limit: SEARCH_LIMIT });
+    if (r.length > 0 && r[0].score < bestScore) { bestScore = r[0].score; best = r; }
+  }
+  return best;
+}
+
+function tokenOverlapScore(queryTokens, candidateTokens) {
+  if (!queryTokens.length || !candidateTokens.length) return 0;
+  const querySet = new Set(queryTokens);
+  const candidateSet = new Set(candidateTokens);
+  let matches = 0;
+  querySet.forEach(token => {
+    if (candidateSet.has(token)) matches++;
+  });
+  return matches / Math.max(querySet.size, candidateSet.size);
+}
+
+// ─── PHONETIC MATCHING (Soundex) ───────────────────────────────────────────
+// Catches same-sounding, differently-spelled names — e.g. "Mensah"/"Mensa",
+// "Owusu"/"Owusuh", "Asante"/"Asanti", "Boateng"/"Boatin" — that pure
+// edit-distance fuzzy matching can miss when the spelling drifts too far.
+const SOUNDEX_CODES = { B:'1',F:'1',P:'1',V:'1', C:'2',G:'2',J:'2',K:'2',Q:'2',S:'2',X:'2',Z:'2', D:'3',T:'3', L:'4', M:'5',N:'5', R:'6' };
+
+function soundex(token) {
+  const s = String(token || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!s) return '';
+  let result = s[0];
+  let prevCode = SOUNDEX_CODES[s[0]] || '';
+  for (let i = 1; i < s.length && result.length < 4; i++) {
+    const c = s[i];
+    const code = SOUNDEX_CODES[c] || '';
+    if (code) {
+      if (code !== prevCode) result += code;
+      prevCode = code;
+    } else if (c !== 'H' && c !== 'W') {
+      prevCode = '';
+    }
+  }
+  return (result + '000').slice(0, 4);
+}
+
+function phoneticTokenOverlapScore(queryTokens, candidateTokens) {
+  if (!queryTokens.length || !candidateTokens.length) return 0;
+  const candidateCodes = new Set(candidateTokens.map(soundex).filter(Boolean));
+  const queryCodes = queryTokens.map(soundex).filter(Boolean);
+  if (!queryCodes.length || !candidateCodes.size) return 0;
+  let matches = 0;
+  new Set(queryCodes).forEach(code => { if (candidateCodes.has(code)) matches++; });
+  return matches / Math.max(new Set(queryCodes).size, candidateCodes.size);
+}
+
+function adjustedResultScore(result, queryTokens) {
+  const fuseScore = 1 - result.score;
+  const candidateTokens = result.item.tokens || tokenizeName(result.item.fullName);
+  const overlap = tokenOverlapScore(queryTokens, candidateTokens);
+  const phoneticOverlap = phoneticTokenOverlapScore(queryTokens, candidateTokens);
+  const queryFirst = queryTokens[0] || '';
+  const queryLast = queryTokens[queryTokens.length - 1] || '';
+  const candFirst = candidateTokens[0] || '';
+  const candLast = candidateTokens[candidateTokens.length - 1] || '';
+  const firstBonus = queryFirst && candFirst === queryFirst ? 0.06
+                    : queryFirst && candFirst && soundex(queryFirst) === soundex(candFirst) ? 0.03 : 0;
+  const lastBonus = queryLast && candLast === queryLast ? 0.08
+                   : queryLast && candLast && soundex(queryLast) === soundex(candLast) ? 0.04 : 0;
+  return Math.min(1, fuseScore * 0.55 + overlap * 0.20 + phoneticOverlap * 0.15 + firstBonus + lastBonus);
+}
+
+function rerankResults(results, queryTokens) {
+  return results
+    .map(result => ({
+      ...result,
+      adjustedScore: adjustedResultScore(result, queryTokens),
+    }))
+    .sort((a, b) => b.adjustedScore - a.adjustedScore);
+}
+
+function chooseBestResults(fuses, permutations, queryTokens, exactLookup) {
+  for (const q of permutations) {
+    const exact = exactLookup.get(q);
+    if (exact && exact.length > 0) {
+      return exact.map(item => ({ item, score: 0, adjustedScore: 1 }));
+    }
+  }
+  const p = bestFuseResults(fuses.fullName, permutations);
+  const w = bestFuseResults(fuses.weighted, permutations);
+  const chosen = (w.length > 0 && (p.length === 0 || w[0].score < p[0].score)) ? w : p;
+  return rerankResults(chosen, queryTokens);
+}
+
+function createFuses(searchList) {
+  return {
+    fullName: new Fuse(searchList, { keys: ['fullName','fullNameRev','tokenSignature'], includeScore: true, threshold: 0.45, ignoreLocation: true }),
+    weighted: new Fuse(searchList, { keys: [{ name:'lastName', weight:0.55 },{ name:'firstName', weight:0.3 },{ name:'tokenSignature', weight:0.15 }], includeScore: true, threshold: 0.45, ignoreLocation: true }),
+  };
+}
+
+// ─── UPLOAD HANDLER ───────────────────────────────────────────────────────────
+function populateSelect(select, headers, autoKeywords) {
+  select.innerHTML = '<option value="">-- Select --</option>';
+  if (select.id.includes('other') || select.id.includes('natid') || select.id.includes('ssnit')) {
+    select.innerHTML += '<option value="__none__">(No Column)</option>';
+    select.value = '__none__';
+  }
+  headers.forEach(h => {
+    const clean = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const opt = document.createElement('option');
+    opt.value = h; opt.text = h;
+    select.appendChild(opt);
+    if (autoKeywords.some(kw => clean.includes(kw))) select.value = h;
+  });
+}
+
+function handleUpload(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    if (!rows.length) { alert('File is empty!'); return; }
+    const headers = Object.keys(rows[0]);
+    if (type === 'names') {
+      state.nameData = rows;
+      dom.dropNames.classList.add('loaded');
+      dom.labelNames.textContent = file.name;
+      dom.labelNames.style.color = 'var(--green)';
+      dom.labelNames.style.fontWeight = '700';
+      dom.mapNames.classList.remove('hidden');
+      populateSelect(dom.selNFirst, headers, ['first','fname','given']);
+      populateSelect(dom.selNOther, headers, ['other','middle','mname']);
+      populateSelect(dom.selNLast, headers, ['last','lname','surname']);
+      populateSelect(dom.selNSalary, headers, ['salary','basic','wage']);
+      populateSelect(dom.selNTier2, headers, ['tier2','2nd','second','tier_2']);
+      populateSelect(dom.selNNatId, headers, ['nationalid','national','ghanacard','nid']);
+      populateSelect(dom.selNSsnit, headers, ['ssnit','ssnitid','ssnitno']);
+    } else {
+      state.masterData = rows;
+      dom.dropMaster.classList.add('loaded');
+      dom.labelMaster.textContent = file.name;
+      dom.labelMaster.style.color = 'var(--green)';
+      dom.labelMaster.style.fontWeight = '700';
+      dom.mapMaster.classList.remove('hidden');
+      populateSelect(dom.selMId, headers, ['id','emp','no','code','member']);
+      populateSelect(dom.selMFirst, headers, ['first','fname','given']);
+      populateSelect(dom.selMOther, headers, ['other','middle','mname']);
+      populateSelect(dom.selMLast, headers, ['last','lname','surname']);
+    }
+    validateForm();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function validateForm() {
+  const required = [dom.selNFirst, dom.selNLast, dom.selMId, dom.selMFirst, dom.selMLast, dom.selNSalary, dom.selNTier2];
+  const ok = required.every(s => s.value && s.value !== '');
+  dom.btnProcess.disabled = !ok;
+  if (ok) {
+    dom.validationMsg.textContent = 'Ready to compare!';
+    dom.validationMsg.style.color = 'var(--green)';
+  } else {
+    dom.validationMsg.textContent = 'Please upload files and map required columns';
+    dom.validationMsg.style.color = 'var(--red)';
+  }
+}
+
+// ─── MODAL / MANUAL REVIEW ────────────────────────────────────────────────────
+let resolveChoice = null;
+
+function askUserToChoose(searchName, results) {
+  return new Promise(resolve => {
+    resolveChoice = resolve;
+    dom.modalSearchName.textContent = searchName;
+    dom.reviewModal.classList.remove('hidden');
+    dom.modalOptions.innerHTML = '';
+
+    results.slice(0, 8).forEach(r => {
+      const score = parseFloat((r.adjustedScore ?? (1 - r.score)).toFixed(4));
+      const mk = getMasterKeys();
+      const mFirst = r.item.raw[mk.f] || '';
+      const mOther = mk.o && mk.o !== '__none__' ? r.item.raw[mk.o] || '' : '';
+      const mLast  = r.item.raw[mk.l] || '';
+      const fullName = [mFirst, mOther, mLast].filter(Boolean).join(' ');
+      const div = document.createElement('div');
+      div.className = 'match-opt';
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:700;font-size:14px">${fullName}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px">${r.item.id}</div>
+        </div>
+        <span class="pill ${score >= .7 ? 'p-green' : score >= .5 ? 'p-yellow' : 'p-red'}">${(score*100).toFixed(1)}%</span>
+      `;
+      div.addEventListener('click', () => {
+        dom.reviewModal.classList.add('hidden');
+        resolve({ id: r.item.id, name: r.item.fullName, score });
+      });
+      dom.modalOptions.appendChild(div);
+    });
+  });
+}
+
+dom.btnSkip.addEventListener('click', () => {
+  dom.reviewModal.classList.add('hidden');
+  if (resolveChoice) resolveChoice({ id: 'NOT FOUND', name: '-', score: 0 });
+});
+
+function getNameKeys() {
+  return { f: dom.selNFirst.value, o: dom.selNOther.value, l: dom.selNLast.value };
+}
+function getMasterKeys() {
+  return { id: dom.selMId.value, f: dom.selMFirst.value, o: dom.selMOther.value, l: dom.selMLast.value };
+}
+
+// ─── MATCHER ──────────────────────────────────────────────────────────────────
+async function runMatcher() {
+  const nameKeys = getNameKeys(), masterKeys = getMasterKeys();
+  const searchList = createSearchList(state.masterData, masterKeys);
+  const fuses = createFuses(searchList);
+  state.fuseFullName = fuses.fullName;
+  state.fuseWeighted = fuses.weighted;
+  state.exactLookup = buildExactLookup(searchList);
+  state.processedData = [];
+  const autoLimit = parseInt(dom.thresholdSlider.value) / 100;
+  dom.modalThresholdBadge.textContent = `Score < ${dom.thresholdSlider.value}%`;
+
+  for (let i = 0; i < state.nameData.length; i++) {
+    const sourceRow = state.nameData[i];
+    const displayName = buildDisplayName(sourceRow, nameKeys);
+    const perms = namePermutations(sourceRow[nameKeys.f], sourceRow[nameKeys.o], sourceRow[nameKeys.l]);
+    const queryTokens = tokenizeName(displayName);
+    const results = chooseBestResults(fuses, perms, queryTokens, state.exactLookup);
+    let match = { id: 'NOT FOUND', name: '-', score: 0, type: 'notfound' };
+
+    if (results.length > 0) {
+      const topScore = parseFloat((results[0].adjustedScore ?? (1 - results[0].score)).toFixed(4));
+      if (topScore >= autoLimit) {
+        match = { id: results[0].item.id, name: results[0].item.fullName, score: topScore, type: 'auto' };
+      } else {
+        dom.queueCounter.textContent = `Row ${i+1} of ${state.nameData.length}`;
+        const chosen = await askUserToChoose(displayName, results);
+        match = { ...chosen, type: chosen.id === 'NOT FOUND' ? 'notfound' : 'manual' };
+      }
+    }
+
+    // Pull the original name parts from the source row for the output file
+    state.processedData.push({
+      'Name List Name': displayName,
+      'Found ID': match.id,
+      'Master List Name': match.name,
+      'Confidence': match.score > 0 ? `${(match.score*100).toFixed(1)}%` : '-',
+      _matchType: match.type,
+      _row: sourceRow,
+    });
+
+    // Update progress
+    const pct = Math.round(((i+1) / state.nameData.length) * 100);
+    dom.progressBar.style.width = pct + '%';
+    dom.progressText.textContent = pct + '%';
+    if (i % 50 === 0) await new Promise(r => setTimeout(r, 0));
+  }
+  return state.processedData;
+}
+
+async function reviewNotFound() {
+  const notFoundRows = state.processedData.filter(r => r._matchType === 'notfound');
+  if (!notFoundRows.length) return;
+  const nameKeys = getNameKeys();
+
+  for (let i = 0; i < notFoundRows.length; i++) {
+    const row = notFoundRows[i];
+    const perms = namePermutations(
+      row._row[nameKeys.f] || '',
+      nameKeys.o !== '__none__' ? row._row[nameKeys.o] : '',
+      row._row[nameKeys.l] || ''
+    );
+    const queryTokens = tokenizeName(row['Name List Name']);
+    const results = chooseBestResults({ fullName: state.fuseFullName, weighted: state.fuseWeighted }, perms, queryTokens, state.exactLookup);
+    dom.queueCounter.textContent = `Not Found ${i+1} of ${notFoundRows.length}`;
+    const chosen = await askUserToChoose(row['Name List Name'], results);
+    const idx = state.processedData.indexOf(row);
+    if (idx !== -1) {
+      state.processedData[idx]['Found ID'] = chosen.id;
+      state.processedData[idx]['Master List Name'] = chosen.name;
+      state.processedData[idx]['Confidence'] = chosen.score > 0 ? `${(chosen.score*100).toFixed(1)}%` : '-';
+      state.processedData[idx]._matchType = chosen.id === 'NOT FOUND' ? 'notfound' : 'manual';
+    }
+  }
+  renderResults();
+}
+
+// ─── RENDER RESULTS ───────────────────────────────────────────────────────────
+function renderResults() {
+  const auto   = state.processedData.filter(r => r._matchType === 'auto').length;
+  const manual = state.processedData.filter(r => r._matchType === 'manual').length;
+  const nf     = state.processedData.filter(r => r._matchType === 'notfound').length;
+
+  dom.statMatched.textContent = auto;
+  dom.statManual.textContent = manual;
+  dom.statNotFound.textContent = nf;
+  dom.resultCount.textContent = `${state.processedData.length} records processed`;
+
+  dom.btnReviewNotFound.classList.toggle('hidden', nf === 0);
+  dom.btnReviewLabel.textContent = `Review Not Found (${nf})`;
+  dom.resultsArea.classList.remove('hidden');
+
+  filterTable();
+}
+
+function filterTable() {
+  const q = dom.tableFilter.value.toLowerCase();
+  const status = dom.tableFilterStatus.value;
+  const filtered = state.processedData.filter(r => {
+    const matchQ = !q || r['Name List Name'].toLowerCase().includes(q) || r['Found ID'].toLowerCase().includes(q);
+    const matchS = status === 'all' || (status === 'found' && r._matchType !== 'notfound') || (status === 'notfound' && r._matchType === 'notfound');
+    return matchQ && matchS;
+  });
+
+  dom.tableBody.innerHTML = filtered.map(r => `
+    <tr>
+      <td style="font-weight:600">${r['Name List Name']}</td>
+      <td class="mono" style="font-size:12px">${r['Found ID']}</td>
+      <td style="color:var(--muted);font-size:12px">${r['Master List Name']}</td>
+      <td><span class="pill ${r._matchType==='notfound'?'p-red':r._matchType==='auto'?'p-green':'p-blue'}">${r['Confidence']}</span></td>
+      <td><span class="pill ${r._matchType==='auto'?'p-green':r._matchType==='manual'?'p-blue':'p-red'}">${r._matchType==='auto'?'Auto':r._matchType==='manual'?'Manual':'Not Found'}</span></td>
+    </tr>
+  `).join('');
+  dom.filterCount.textContent = `Showing ${filtered.length} of ${state.processedData.length}`;
+}
+
+// ─── DOWNLOAD: MATCH RESULTS (original format) ───────────────────────────────
+function downloadMatchResults() {
+  const rows = state.processedData.map(r => ({
+    'Name List Name': r['Name List Name'],
+    'Found ID': r['Found ID'],
+    'Master List Name': r['Master List Name'],
+    'Confidence': r['Confidence'],
+    'Status': r._matchType === 'auto' ? 'Auto' : r._matchType === 'manual' ? 'Manual' : 'Not Found',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Match Results');
+  XLSX.writeFile(wb, 'Match_Results.xlsx');
+}
+
+// ─── DOWNLOAD: FANTEAKWA SUBMISSION FILE ─────────────────────────────────────
+//
+// HOW THE OUTPUT IS BUILT — column by column:
+//
+//  Branch            → from cfg-branch input (same for every row)
+//  National ID       → blank (not available from source data)
+//  Membership ID     → "Found ID" from the matcher (the matched ID from master list)
+//  First Name        → from the NAME LIST file, first-name column
+//  Other Names       → from the NAME LIST file, other-name column
+//  Surname           → from the NAME LIST file, last-name column
+//  SSNIT I.D.        → blank (not in source data — user fills manually if needed)
+//  Date of Birth     → blank
+//  Start Date        → blank
+//  Cycle Date        → from cfg-cycle input (same for every row)
+//  Basic Salary      → from cfg-salary input (same for every row)
+//  2nd Tier          → from cfg-tier2 input (same for every row)
+//  3rd Tier ER       → from cfg-tier3er input (same for every row)
+//  3rd Tier EE       → from cfg-tier3ee input (same for every row)
+//  Management Unit   → same as Branch (from cfg-branch input)
+//  Investment Date   → from cfg-invest input (same for every row)
+//  Region            → from cfg-region input (same for every row)
+//
+// Rows where Found ID = "NOT FOUND" are included but highlighted so the user
+// can see which records still need attention.
+//
+// Converts a native date-input value (YYYY-MM-DD) to the M/D/YYYY format
+// required by the submission template. Leaves the value untouched if it's
+// not in that shape (e.g. empty string).
+function isoToMDY(isoDate) {
+  const parts = String(isoDate || '').split('-');
+  if (parts.length !== 3) return isoDate || '';
+  const [y, m, d] = parts;
+  if (!y || !m || !d) return isoDate || '';
+  return `${parseInt(m, 10)}/${parseInt(d, 10)}/${y}`;
+}
+
+function downloadFanteakwaFile() {
+  const nameKeys = getNameKeys();
+  const branch  = dom.cfgBranch.value.trim() || '';
+  const region  = dom.cfgRegion.value.trim() || '';
+  const cycle   = isoToMDY(dom.cfgCycle.value.trim());
+  const invest  = isoToMDY(dom.cfgInvest.value.trim());
+  const outputName = dom.cfgOutputName.value.trim();
+  const salarCol = dom.selNSalary.value;
+  const tier2Col = dom.selNTier2.value;
+  const natIdCol = dom.selNNatId.value;
+  const ssnitCol = dom.selNSsnit.value;
+
+  const headers = [
+    'Branch','National ID','Membership ID','First Name','Other Names','Surname',
+    'SSNIT I.D.','Date of Birth (M/D/YYYY)','Start Date (M/D/YYYY)','Cycle Date (M/D/YYYY)',
+    'Basic Salary','2nd Tier','3rd Tier ER','3rd Tier EE',
+    'Management Unit','Investment Date (M/D/YYYY)','Region'
+  ];
+
+  const rows = state.processedData.map(r => {
+    const src = r._row || {};
+    const firstName  = String(src[nameKeys.f]  || '').trim();
+    const otherNames = nameKeys.o && nameKeys.o !== '__none__' ? String(src[nameKeys.o] || '').trim() : '';
+    const surname    = String(src[nameKeys.l]  || '').trim();
+    // Read salary and 2nd tier from the source row's own columns
+    const salary = parseFloat(src[salarCol]) || 0;
+    const tier2  = parseFloat(src[tier2Col])  || 0;
+    // Read National ID / SSNIT ID from the source row's own columns, if mapped
+    const nationalId = (natIdCol && natIdCol !== '__none__') ? String(src[natIdCol] || '').trim() : '';
+    const ssnitId    = (ssnitCol && ssnitCol !== '__none__') ? String(src[ssnitCol] || '').trim() : '';
+
+    return {
+      'Branch':                      branch,
+      'National ID':                 nationalId,
+      'Membership ID':               r['Found ID'],
+      'First Name':                  firstName,
+      'Other Names':                 otherNames,
+      'Surname':                     surname,
+      'SSNIT I.D.':                  ssnitId,
+      'Date of Birth (M/D/YYYY)':    '',
+      'Start Date (M/D/YYYY)':       '',
+      'Cycle Date (M/D/YYYY)':       cycle,
+      'Basic Salary':                salary,
+      '2nd Tier':                    tier2,
+      '3rd Tier ER':                 0,
+      '3rd Tier EE':                 0,
+      'Management Unit':             branch,
+      'Investment Date (M/D/YYYY)':  invest,
+      'Region':                      region,
+    };
+  });
+
+  // Build workbook
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+  // Highlight NOT FOUND rows in light red
+  rows.forEach((row, rowIdx) => {
+    if (row['Membership ID'] === 'NOT FOUND') {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const cellAddr = XLSX.utils.encode_cell({ r: rowIdx + 1, c: C });
+        if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
+        ws[cellAddr].s = {
+          fill: { fgColor: { rgb: 'FEE2E2' } },
+          font: { color: { rgb: 'B91C1C' } },
+        };
+      }
+    }
+  });
+
+  // Set column widths to match Fanteakwa format
+  ws['!cols'] = [
+    { wch: 36 }, // Branch
+    { wch: 14 }, // National ID
+    { wch: 16 }, // Membership ID
+    { wch: 14 }, // First Name
+    { wch: 14 }, // Other Names
+    { wch: 16 }, // Surname
+    { wch: 18 }, // SSNIT I.D.
+    { wch: 20 }, // DOB
+    { wch: 20 }, // Start Date
+    { wch: 20 }, // Cycle Date
+    { wch: 13 }, // Basic Salary
+    { wch: 10 }, // 2nd Tier
+    { wch: 11 }, // 3rd Tier ER
+    { wch: 11 }, // 3rd Tier EE
+    { wch: 36 }, // Management Unit
+    { wch: 22 }, // Investment Date
+    { wch: 16 }, // Region
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  function safeFileName(name) {
+    return String(name || '')
+      .replace(/[\/:*?"<>|]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Generate filename with today's date and branch name
+  const today = new Date();
+  const monthNames = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  const monthName = monthNames[today.getMonth()];
+  const yyyy = today.getFullYear();
+  const safeBranch = branch.replace(/[\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${yyyy}.xlsx`;
+  const sanitizedOutputName = outputName ? safeFileName(outputName) : '';
+  const customName = sanitizedOutputName ? `${sanitizedOutputName}.xlsx` : fallbackName;
+  XLSX.writeFile(wb, customName);
+}
+
+// ─── MAIN PROCESS ─────────────────────────────────────────────────────────────
+async function handleRunMatcher() {
+  dom.btnProcess.disabled = true;
+  dom.validationMsg.textContent = '';
+  dom.progressContainer.classList.remove('hidden');
+  dom.progressBar.style.width = '0%';
+  dom.progressText.textContent = '0%';
+  dom.resultsArea.classList.add('hidden');
+
+  await runMatcher();
+
+  dom.progressText.textContent = 'Complete!';
+  renderResults();
+  dom.btnProcess.disabled = false;
+  setTimeout(() => dom.progressContainer.classList.add('hidden'), 3000);
+}
+
+// ─── EVENTS ───────────────────────────────────────────────────────────────────
+dom.inputNames.addEventListener('change', e => handleUpload(e, 'names'));
+dom.inputMaster.addEventListener('change', e => handleUpload(e, 'master'));
+dom.btnProcess.addEventListener('click', handleRunMatcher);
+dom.btnDownloadMatch.addEventListener('click', downloadMatchResults);
+dom.btnDownloadFanteakwa.addEventListener('click', downloadFanteakwaFile);
+dom.btnReviewNotFound.addEventListener('click', async () => {
+  dom.btnReviewNotFound.disabled = true;
+  dom.btnReviewLabel.textContent = 'Reviewing…';
+  await reviewNotFound();
+  dom.btnReviewNotFound.disabled = false;
+  validateForm();
+});
+dom.thresholdSlider.addEventListener('input', () => {
+  dom.thresholdVal.textContent = dom.thresholdSlider.value + '%';
+});
+dom.tableFilter.addEventListener('input', filterTable);
+dom.tableFilterStatus.addEventListener('change', filterTable);
+[dom.selNFirst,dom.selNOther,dom.selNLast,dom.selNSalary,dom.selNTier2,dom.selNNatId,dom.selNSsnit,dom.selMId,dom.selMFirst,dom.selMOther,dom.selMLast]
+  .forEach(s => s.addEventListener('change', validateForm));
+
+validateForm();
+</script>
+</body>
+</html>

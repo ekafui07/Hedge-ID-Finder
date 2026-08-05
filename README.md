@@ -6,7 +6,7 @@ It compares a **Name List** (records missing IDs) against a **Master List** (rec
 1. A match audit file (who matched, confidence, and status)
 2. A submission-ready schedule file in the required column layout
 
-The app is a single `index.html` file and runs fully client-side in your browser. No backend is required and files are not uploaded to a server.
+A landing page (index.html) guides users and links to the full matcher app (app.html). The matcher runs fully client-side in your browser — no backend is required and files are not uploaded to a server.
 
 ## What the App Does
 
@@ -60,7 +60,7 @@ https://ekafui07.github.io/Hedge-ID-Finder/
 
 ### Option B: Run locally
 1. Clone or download this repository
-2. Open `index.html` directly in a modern browser (Chrome, Edge, Firefox)
+2. Open `index.html` (landing page) in a modern browser and click "Open Matcher" to launch the app (`app.html`).
 
 No install, no build step, and no server process is required.
 
@@ -147,4 +147,14 @@ Rows with `NOT FOUND` are included so they can be corrected later.
 ## Privacy
 
 All processing is done in the browser. Your spreadsheets remain on your machine.
+
+## Where to find templates and the matcher
+
+- Templates are available in the repository root:
+  - `ID Template.xlsx` — example ID/metadata template
+  - `LIST TEMPLATE.xlsx` — example Name List template
+- Open the landing page (index.html) and use the "Download ID Template" and "Download List Template" buttons to save the sample files.
+- To run the matcher, open `index.html` and click "Open Matcher" (or open `app.html` directly).
+
+If you publish this repository (e.g., GitHub Pages), `index.html` is the landing page users see first; `app.html` contains the full matcher app.
 
