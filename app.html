@@ -334,6 +334,113 @@ input[type=date]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
+/* Custom date field (always displays mm/dd/yyyy, independent of browser locale) */
+.date-field { position: relative; }
+.date-input-wrap { position: relative; }
+.date-display {
+  cursor: pointer;
+  padding-right: 38px !important;
+}
+.date-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+.date-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 280px;
+  background: #1b2230;
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,0.6);
+}
+.date-popover.hidden { display: none; }
+/* Portaled to <body> at runtime — sits in the top-level stacking context,
+   so it always renders above every card regardless of DOM position. */
+.date-popover-portal {
+  z-index: 9999;
+}
+.date-pop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.date-pop-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+.date-pop-nav {
+  display: flex;
+  gap: 4px;
+}
+.date-pop-nav button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.date-pop-nav button:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.06);
+}
+.date-pop-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+.date-pop-dow {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 6px 0;
+}
+.date-pop-day {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 7px 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.date-pop-day:hover { background: rgba(255,255,255,0.08); }
+.date-pop-day.muted { color: var(--muted); opacity: 0.45; }
+.date-pop-day.today { border: 1px solid var(--border2); }
+.date-pop-day.selected { background: var(--blue); color: #fff; }
+.date-pop-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.date-pop-footer button {
+  background: transparent;
+  border: none;
+  color: var(--blue-light);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.date-pop-footer button:hover { text-decoration: underline; }
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -845,8 +952,24 @@ tr:hover td {
     <div class="config-grid">
       <div><label class="field">Branch / Management Unit</label><input type="text" id="cfg-branch" value="FANTEAKWA NORTH DISTRICT ASSEMBLY" placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY"></div>
       <div><label class="field">Region</label><input type="text" id="cfg-region" value="EASTERN REGION" placeholder="e.g. EASTERN REGION"></div>
-      <div><label class="field">Cycle Date</label><input type="date" id="cfg-cycle" value=""></div>
-      <div><label class="field">Investment Date</label><input type="date" id="cfg-invest" value=""></div>
+      <div class="date-field" data-datefield>
+        <label class="field">Cycle Date</label>
+        <input type="hidden" id="cfg-cycle" value="">
+        <div class="date-input-wrap">
+          <input type="text" class="date-display" id="cfg-cycle-display" placeholder="mm/dd/yyyy" autocomplete="off" inputmode="numeric">
+          <svg class="date-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
+        </div>
+        <div class="date-popover hidden"></div>
+      </div>
+      <div class="date-field" data-datefield>
+        <label class="field">Investment Date</label>
+        <input type="hidden" id="cfg-invest" value="">
+        <div class="date-input-wrap">
+          <input type="text" class="date-display" id="cfg-invest-display" placeholder="mm/dd/yyyy" autocomplete="off" inputmode="numeric">
+          <svg class="date-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
+        </div>
+        <div class="date-popover hidden"></div>
+      </div>
     </div>
     <div class="filename-row">
       <label class="field">Output File Name</label>
@@ -1615,9 +1738,8 @@ function downloadFanteakwaFile() {
   const monthNames = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
   const monthName = monthNames[today.getMonth()];
   const yyyy = today.getFullYear();
-  const dd = today.getDate();
   const safeBranch = branch.replace(/[\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
-  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${dd} ${yyyy}.xlsx`;
+  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${yyyy}.xlsx`;
   const sanitizedOutputName = outputName ? safeFileName(outputName) : '';
   const customName = sanitizedOutputName ? `${sanitizedOutputName}.xlsx` : fallbackName;
   XLSX.writeFile(wb, customName);
@@ -1660,6 +1782,170 @@ dom.tableFilter.addEventListener('input', filterTable);
 dom.tableFilterStatus.addEventListener('change', filterTable);
 [dom.selNFirst,dom.selNOther,dom.selNLast,dom.selNSalary,dom.selNTier2,dom.selNNatId,dom.selNSsnit,dom.selMId,dom.selMFirst,dom.selMOther,dom.selMLast]
   .forEach(s => s.addEventListener('change', validateForm));
+
+// ─── CUSTOM DATE PICKER (always mm/dd/yyyy — independent of browser/OS locale) ─
+//
+// Native <input type="date"> renders and displays using the browser/OS locale
+// setting, not the page's own code — that's why the same field can look like
+// mm/dd/yyyy on one machine and dd/mm/yyyy on another. This custom widget owns
+// its own rendering, so the display format is guaranteed everywhere.
+//
+// Each field pairs:
+//   - a hidden input (id="cfg-cycle" / "cfg-invest") holding the ISO value
+//     (YYYY-MM-DD), which is what the rest of the app (isoToMDY, downloads)
+//     already reads from — unchanged.
+//   - a visible text input (id="cfg-cycle-display" / "cfg-invest-display")
+//     that always shows MM/DD/YYYY, with a click-to-open calendar popover.
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function initDatePicker(hiddenId, displayId) {
+  const hidden = document.getElementById(hiddenId);
+  const display = document.getElementById(displayId);
+  const field = display.closest('[data-datefield]');
+  const popover = field.querySelector('.date-popover');
+
+  // Move the popover out to <body> ("portal" it) so it isn't trapped inside
+  // this card's stacking context — otherwise a later sibling card can paint
+  // on top of it even with a higher z-index, since z-index only wins within
+  // the same stacking context.
+  popover.classList.add('date-popover-portal');
+  document.body.appendChild(popover);
+
+  function positionPopover() {
+    const rect = display.getBoundingClientRect();
+    popover.style.position = 'fixed';
+    popover.style.top = `${rect.bottom + 6}px`;
+    popover.style.left = `${rect.left}px`;
+  }
+
+  let viewDate = new Date(); // month currently shown in the popover
+  let selected = null;       // Date object of the selected day, or null
+
+  function isoOf(d) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+  function mdyOf(d) {
+    return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
+  }
+  function setSelected(d) {
+    selected = d;
+    hidden.value = d ? isoOf(d) : '';
+    display.value = d ? mdyOf(d) : '';
+  }
+  function sameDay(a, b) {
+    return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function render() {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstOfMonth = new Date(year, month, 1);
+    const startWeekday = firstOfMonth.getDay(); // 0=Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const today = new Date();
+
+    let cells = '';
+    // Leading days from previous month
+    for (let i = startWeekday - 1; i >= 0; i--) {
+      const dayNum = daysInPrevMonth - i;
+      cells += `<button type="button" class="date-pop-day muted" data-nav="prev" data-day="${dayNum}">${dayNum}</button>`;
+    }
+    // Days of current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cellDate = new Date(year, month, d);
+      const classes = ['date-pop-day'];
+      if (sameDay(cellDate, today)) classes.push('today');
+      if (sameDay(cellDate, selected)) classes.push('selected');
+      cells += `<button type="button" class="${classes.join(' ')}" data-day="${d}">${d}</button>`;
+    }
+    // Trailing days from next month to fill the grid
+    const totalCells = startWeekday + daysInMonth;
+    const trailing = (7 - (totalCells % 7)) % 7;
+    for (let d = 1; d <= trailing; d++) {
+      cells += `<button type="button" class="date-pop-day muted" data-nav="next" data-day="${d}">${d}</button>`;
+    }
+
+    popover.innerHTML = `
+      <div class="date-pop-header">
+        <span class="date-pop-title">${monthNames[month]} ${year}</span>
+        <div class="date-pop-nav">
+          <button type="button" data-act="prev-month" aria-label="Previous month">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" data-act="next-month" aria-label="Next month">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="date-pop-grid">
+        ${['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => `<div class="date-pop-dow">${d}</div>`).join('')}
+        ${cells}
+      </div>
+      <div class="date-pop-footer">
+        <button type="button" data-act="clear">Clear</button>
+        <button type="button" data-act="today">Today</button>
+      </div>
+    `;
+  }
+
+  function open() {
+    viewDate = selected ? new Date(selected.getFullYear(), selected.getMonth(), 1) : new Date();
+    render();
+    positionPopover();
+    popover.classList.remove('hidden');
+  }
+  function close() {
+    popover.classList.add('hidden');
+  }
+
+  display.addEventListener('click', () => {
+    const wasHidden = popover.classList.contains('hidden');
+    document.querySelectorAll('.date-popover').forEach(p => p.classList.add('hidden'));
+    if (wasHidden) open();
+  });
+
+  window.addEventListener('scroll', () => { if (!popover.classList.contains('hidden')) positionPopover(); }, true);
+  window.addEventListener('resize', () => { if (!popover.classList.contains('hidden')) positionPopover(); });
+
+  // Manual typing support: parse mm/dd/yyyy as the user types/blurs
+  display.addEventListener('blur', () => {
+    const m = display.value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+      const [, mo, da, yr] = m;
+      const d = new Date(Number(yr), Number(mo) - 1, Number(da));
+      if (d.getMonth() === Number(mo) - 1 && d.getDate() === Number(da)) {
+        setSelected(d);
+        return;
+      }
+    }
+    if (display.value.trim() === '') setSelected(null);
+    else display.value = selected ? mdyOf(selected) : '';
+  });
+
+  popover.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.act === 'prev-month') { viewDate.setMonth(viewDate.getMonth() - 1); render(); return; }
+    if (btn.dataset.act === 'next-month') { viewDate.setMonth(viewDate.getMonth() + 1); render(); return; }
+    if (btn.dataset.act === 'clear') { setSelected(null); close(); return; }
+    if (btn.dataset.act === 'today') { const t = new Date(); setSelected(new Date(t.getFullYear(), t.getMonth(), t.getDate())); viewDate = new Date(t.getFullYear(), t.getMonth(), 1); render(); close(); return; }
+    if (btn.dataset.day) {
+      if (btn.dataset.nav === 'prev') { viewDate.setMonth(viewDate.getMonth() - 1); setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), Number(btn.dataset.day))); close(); return; }
+      if (btn.dataset.nav === 'next') { viewDate.setMonth(viewDate.getMonth() + 1); setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), Number(btn.dataset.day))); close(); return; }
+      setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), Number(btn.dataset.day)));
+      close();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!field.contains(e.target) && !popover.contains(e.target)) close();
+  });
+}
+
+initDatePicker('cfg-cycle', 'cfg-cycle-display');
+initDatePicker('cfg-invest', 'cfg-invest-display');
 
 validateForm();
 </script>
