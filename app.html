@@ -1615,8 +1615,9 @@ function downloadFanteakwaFile() {
   const monthNames = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
   const monthName = monthNames[today.getMonth()];
   const yyyy = today.getFullYear();
+  const dd = today.getDate();
   const safeBranch = branch.replace(/[\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
-  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${yyyy}.xlsx`;
+  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${dd} ${yyyy}.xlsx`;
   const sanitizedOutputName = outputName ? safeFileName(outputName) : '';
   const customName = sanitizedOutputName ? `${sanitizedOutputName}.xlsx` : fallbackName;
   XLSX.writeFile(wb, customName);
