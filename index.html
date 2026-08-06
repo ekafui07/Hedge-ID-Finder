@@ -6,7 +6,6 @@
 <meta name="description" content="Reconcile name mismatch issues and generate pension schedule files effortlessly. Match IDs and export submission sheets for Hedge Pensions.">
 <title>Hedge Pensions — Smart Matcher Guide & Templates</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -149,14 +148,14 @@ h1, h2, h3 {
       </a>
       
       <div class="flex gap-2">
-        <button id="btn-download-id-tmpl" onclick="downloadTemplate('id')" class="px-6 py-4 rounded-xl text-sm font-semibold border border-white/5 bg-white/5 hover:border-amber-500/30 hover:bg-white/10 active:scale-95 transition-all inline-flex items-center gap-2">
+        <a id="btn-download-id-tmpl" href="ID_Template.xlsx" download="ID_Template.xlsx" class="px-6 py-4 rounded-xl text-sm font-semibold border border-white/5 bg-white/5 hover:border-amber-500/30 hover:bg-white/10 active:scale-95 transition-all inline-flex items-center gap-2">
           <svg class="text-[#e8924a]" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           ID Template
-        </button>
-        <button id="btn-download-list-tmpl" onclick="downloadTemplate('list')" class="px-6 py-4 rounded-xl text-sm font-semibold border border-white/5 bg-white/5 hover:border-amber-500/30 hover:bg-white/10 active:scale-95 transition-all inline-flex items-center gap-2">
+        </a>
+        <a id="btn-download-list-tmpl" href="LIST_TEMPLATE.xlsx" download="LIST_TEMPLATE.xlsx" class="px-6 py-4 rounded-xl text-sm font-semibold border border-white/5 bg-white/5 hover:border-amber-500/30 hover:bg-white/10 active:scale-95 transition-all inline-flex items-center gap-2">
           <svg class="text-[#e8924a]" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           List Template
-        </button>
+        </a>
       </div>
     </div>
   </section>
@@ -281,10 +280,10 @@ h1, h2, h3 {
             <h4 class="font-bold text-slate-100 text-sm">Hedge Member ID List Template</h4>
             <p class="text-xs text-slate-400 mt-1">This master reference file acts as the database against which monthly employee records are reconciled.</p>
           </div>
-          <button onclick="downloadTemplate('id')" class="text-xs font-bold text-[#e8924a] hover:text-[#ffaa60] flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 active:scale-95 transition-all">
+          <a href="ID_Template.xlsx" download="ID_Template.xlsx" class="text-xs font-bold text-[#e8924a] hover:text-[#ffaa60] flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 active:scale-95 transition-all">
             Download Excel
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
+          </a>
         </div>
 
         <div class="overflow-x-auto border border-white/5 rounded-xl">
@@ -337,10 +336,10 @@ h1, h2, h3 {
             <h4 class="font-bold text-slate-100 text-sm">Hedge Schedule Names List Template</h4>
             <p class="text-xs text-slate-400 mt-1">This input file represents the monthly salary/tier contributions sheet that has misspelled name fields.</p>
           </div>
-          <button onclick="downloadTemplate('list')" class="text-xs font-bold text-[#e8924a] hover:text-[#ffaa60] flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 active:scale-95 transition-all">
+          <a href="LIST_TEMPLATE.xlsx" download="LIST_TEMPLATE.xlsx" class="text-xs font-bold text-[#e8924a] hover:text-[#ffaa60] flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 active:scale-95 transition-all">
             Download Excel
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
+          </a>
         </div>
 
         <div class="overflow-x-auto border border-white/5 rounded-xl">
@@ -454,88 +453,6 @@ function switchTab(tabId) {
   }
 }
 
-// ─── DYNAMIC EXCEL TEMPLATE GENERATION ─────────────────────────────────────
-function downloadTemplate(type) {
-  const wb = XLSX.utils.book_new();
-  let data = [];
-  let filename = "";
-
-  if (type === 'id') {
-    filename = "Hedge_Member_ID_List_Template.xlsx";
-    data = [
-      {
-        "Member ID": "HP-1001",
-        "First Name": "John",
-        "Other Name": "Kofi",
-        "Last Name": "Mensah",
-        "National ID": "GHA-001234567-1",
-        "SSNIT ID": "3456789012"
-      },
-      {
-        "Member ID": "HP-1002",
-        "First Name": "Ama",
-        "Other Name": "",
-        "Last Name": "Osei",
-        "National ID": "GHA-009876543-2",
-        "SSNIT ID": "9876543210"
-      },
-      {
-        "Member ID": "HP-1003",
-        "First Name": "David",
-        "Other Name": "Kwame",
-        "Last Name": "Boateng",
-        "National ID": "GHA-005544332-9",
-        "SSNIT ID": "5544332211"
-      }
-    ];
-  } else if (type === 'list') {
-    filename = "Hedge_Schedule_Names_List_Template.xlsx";
-    data = [
-      {
-        "First Name": "John",
-        "Other Name": "K.",
-        "Last Name": "Mensa",
-        "Basic Salary": 1500.00,
-        "2nd Tier": 75.00,
-        "National ID": "GHA-001234567-1",
-        "SSNIT ID": "3456789012"
-      },
-      {
-        "First Name": "Ama",
-        "Other Name": "",
-        "Last Name": "Osei",
-        "Basic Salary": 2200.00,
-        "2nd Tier": 110.00,
-        "National ID": "GHA-009876543-2",
-        "SSNIT ID": "9876543210"
-      },
-      {
-        "First Name": "David",
-        "Other Name": "Kwame",
-        "Last Name": "Boatin",
-        "Basic Salary": 1850.50,
-        "2nd Tier": 92.53,
-        "National ID": "",
-        "SSNIT ID": ""
-      }
-    ];
-  }
-
-  const ws = XLSX.utils.json_to_sheet(data);
-  
-  // Apply visual column formatting
-  ws['!cols'] = [
-    { wch: 18 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 22 },
-    { wch: 16 }
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, "Template");
-  XLSX.writeFile(wb, filename);
-}
 </script>
 </body>
 </html>
