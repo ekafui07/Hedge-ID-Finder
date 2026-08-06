@@ -845,14 +845,8 @@ tr:hover td {
     <div class="config-grid">
       <div><label class="field">Branch / Management Unit</label><input type="text" id="cfg-branch" value="FANTEAKWA NORTH DISTRICT ASSEMBLY" placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY"></div>
       <div><label class="field">Region</label><input type="text" id="cfg-region" value="EASTERN REGION" placeholder="e.g. EASTERN REGION"></div>
-      <div>
-        <label class="field">Cycle Date</label>
-        <input type="date" id="cfg-cycle" />
-      </div>
-      <div>
-        <label class="field">Investment Date</label>
-        <input type="date" id="cfg-invest" />
-      </div>
+      <div><label class="field">Cycle Date</label><input type="date" id="cfg-cycle" value=""></div>
+      <div><label class="field">Investment Date</label><input type="date" id="cfg-invest" value=""></div>
     </div>
     <div class="filename-row">
       <label class="field">Output File Name</label>
@@ -1504,21 +1498,23 @@ function downloadMatchResults() {
 // Rows where Found ID = "NOT FOUND" are included but highlighted so the user
 // can see which records still need attention.
 //
-// Builds a Month/Day/Year string from separate numeric input fields.
-function formatDateToMDY(dateStr) {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return '';
-  const [year, month, day] = parts;
-  return `${parseInt(month, 10)}/${parseInt(day, 10)}/${year}`;
+// Converts a native date-input value (YYYY-MM-DD) to the M/D/YYYY format
+// required by the submission template. Leaves the value untouched if it's
+// not in that shape (e.g. empty string).
+function isoToMDY(isoDate) {
+  const parts = String(isoDate || '').split('-');
+  if (parts.length !== 3) return isoDate || '';
+  const [y, m, d] = parts;
+  if (!y || !m || !d) return isoDate || '';
+  return `${parseInt(m, 10)}/${parseInt(d, 10)}/${y}`;
 }
 
 function downloadFanteakwaFile() {
   const nameKeys = getNameKeys();
   const branch  = dom.cfgBranch.value.trim() || '';
   const region  = dom.cfgRegion.value.trim() || '';
-  const cycle   = formatDateToMDY(dom.cfgCycle.value);
-  const invest  = formatDateToMDY(dom.cfgInvest.value);
+  const cycle   = isoToMDY(dom.cfgCycle.value.trim());
+  const invest  = isoToMDY(dom.cfgInvest.value.trim());
   const outputName = dom.cfgOutputName.value.trim();
   const salarCol = dom.selNSalary.value;
   const tier2Col = dom.selNTier2.value;
@@ -1619,8 +1615,9 @@ function downloadFanteakwaFile() {
   const monthNames = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
   const monthName = monthNames[today.getMonth()];
   const yyyy = today.getFullYear();
+  const dd = today.getDate();
   const safeBranch = branch.replace(/[\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
-  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${yyyy}.xlsx`;
+  const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${dd} ${yyyy}.xlsx`;
   const sanitizedOutputName = outputName ? safeFileName(outputName) : '';
   const customName = sanitizedOutputName ? `${sanitizedOutputName}.xlsx` : fallbackName;
   XLSX.writeFile(wb, customName);
