@@ -1871,11 +1871,17 @@ function initDatePicker(hiddenId, displayId) {
       <div class="date-pop-header">
         <span class="date-pop-title">${monthNames[month]} ${year}</span>
         <div class="date-pop-nav">
-          <button type="button" data-act="prev-month" aria-label="Previous month">
+          <button type="button" data-act="prev-year" aria-label="Previous year" title="Previous year">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 17l-6-5 6-5M11 17l-6-5 6-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" data-act="prev-month" aria-label="Previous month" title="Previous month">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" data-act="next-month" aria-label="Next month">
+          <button type="button" data-act="next-month" aria-label="Next month" title="Next month">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" data-act="next-year" aria-label="Next year" title="Next year">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 17l6-5-6-5M13 17l6-5-6-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
       </div>
@@ -1925,8 +1931,17 @@ function initDatePicker(hiddenId, displayId) {
   });
 
   popover.addEventListener('click', (e) => {
+    // Stop this click from bubbling to the document-level "click outside
+    // closes it" listener below. Without this, render() rebuilding the
+    // popover's HTML (to show the new month) detaches the exact button the
+    // user clicked; the bubbling event then arrives at that listener holding
+    // a reference to an element no longer in the DOM, so `popover.contains()`
+    // wrongly reports false and the popover slams shut right after opening.
+    e.stopPropagation();
     const btn = e.target.closest('button');
     if (!btn) return;
+    if (btn.dataset.act === 'prev-year') { viewDate.setFullYear(viewDate.getFullYear() - 1); render(); return; }
+    if (btn.dataset.act === 'next-year') { viewDate.setFullYear(viewDate.getFullYear() + 1); render(); return; }
     if (btn.dataset.act === 'prev-month') { viewDate.setMonth(viewDate.getMonth() - 1); render(); return; }
     if (btn.dataset.act === 'next-month') { viewDate.setMonth(viewDate.getMonth() + 1); render(); return; }
     if (btn.dataset.act === 'clear') { setSelected(null); close(); return; }
