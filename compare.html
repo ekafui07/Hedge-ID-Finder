@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hedge Pensions — Schedule Comparer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06090e;
+      --card-bg: linear-gradient(135deg, rgba(22, 30, 43, 0.7) 0%, rgba(11, 16, 23, 0.9) 100%);
+      --accent: #e8924a;
+      --accent-light: #ffb574;
+      --border: rgba(255, 255, 255, 0.05);
+      --border2: rgba(255, 255, 255, 0.1);
+      --border-focus: rgba(232, 146, 74, 0.35);
+      --green: #10b981;
+      --green-light: #34d399;
+      --blue: #3b82f6;
+      --blue-light: #60a5fa;
+      --red: #ef4444;
+      --red-light: #f87171;
+      --yellow: #f59e0b;
+      --yellow-light: #fbbf24;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --faint: rgba(255, 255, 255, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace
+    }
+
+    /* Grid background pattern */
+    .bg-mesh {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 24px 24px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Glowing decorative shapes */
+    .glow-orb-orange {
+      position: absolute;
+      top: -120px;
+      right: -100px;
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(232, 146, 74, 0.08) 0%, transparent 65%);
+      z-index: 0;
+      pointer-events: none;
+      filter: blur(40px);
+      animation: float-slow 15s infinite alternate ease-in-out;
+    }
+
+    .glow-orb-blue {
+      position: absolute;
+      bottom: 100px;
+      left: -200px;
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 65%);
+      z-index: 0;
+      pointer-events: none;
+      filter: blur(45px);
+      animation: float-slow 20s infinite alternate-reverse ease-in-out;
+    }
+
+    @keyframes float-slow {
+      0% {
+        transform: translateY(0) scale(1);
+      }
+
+      100% {
+        transform: translateY(30px) scale(1.05);
+      }
+    }
+
+    /* Layout elements */
+    .app-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 32px 16px 64px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .nav-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 12px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .nav-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(232, 146, 74, 0.25);
+    }
+
+    .nav-title {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #fff;
+    }
+
+    .nav-badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(232, 146, 74, 0.1);
+      padding: 6px 14px;
+      border-radius: 99px;
+      border: 1px solid rgba(232, 146, 74, 0.15);
+    }
+
+    .hero-section {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .hero-title {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 40%, rgba(255, 255, 255, 0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .accent-plus {
+      color: var(--accent);
+      background: none;
+      -webkit-text-fill-color: initial;
+    }
+
+    .hero-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Responsive Grid layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media(max-width:768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Premium glass cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      z-index: 10;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.7);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .card-sm {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      transition: all 0.25s ease;
+    }
+
+    .card-sm:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Drop zones */
+    .drop-zone {
+      border: 2px dashed rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      background: rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      height: 110px;
+    }
+
+    .drop-zone:hover {
+      border-color: var(--accent);
+      background: rgba(232, 146, 74, 0.03);
+      transform: translateY(-2px);
+    }
+
+    .drop-zone svg {
+      color: var(--muted);
+      transition: all 0.3s ease;
+    }
+
+    .drop-zone:hover svg {
+      color: var(--accent-light);
+      transform: translateY(-2px);
+    }
+
+    .drop-zone.loaded {
+      border-color: var(--green);
+      background: rgba(16, 185, 129, 0.04);
+    }
+
+    .drop-zone.loaded svg {
+      color: var(--green);
+    }
+
+    .drop-zone.loaded:hover {
+      border-color: var(--green-light);
+      background: rgba(16, 185, 129, 0.07);
+    }
+
+    .drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-zone-text {
+      font-size: 12.5px;
+      color: var(--muted);
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .drop-zone:hover .drop-zone-text {
+      color: var(--text);
+    }
+
+    /* Column mapping elements */
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mapping-span-2 {
+      grid-column: span 2;
+    }
+
+    @media(max-width: 500px) {
+      .mapping-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mapping-span-2 {
+        grid-column: span 1;
+      }
+    }
+
+    /* Fields */
+    label.field {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input[type=text],
+    input[type=number],
+    input[type=date] {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      outline: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    select:focus,
+    input:focus {
+      border-color: var(--border-focus);
+      background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 15px rgba(232, 146, 74, 0.15);
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%2394a3b8' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 28px;
+    }
+
+    input[type=date] {
+      color-scheme: dark;
+    }
+
+    input[type=date]::-webkit-calendar-picker-indicator {
+      filter: invert(0.8) brightness(1.2);
+      cursor: pointer;
+    }
+
+    /* Custom date field */
+    .date-field {
+      position: relative;
+    }
+
+    .date-input-wrap {
+      position: relative;
+    }
+
+    .date-display {
+      cursor: pointer;
+      padding-right: 38px !important;
+    }
+
+    .date-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .date-popover {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 50;
+      width: 280px;
+      background: #1b2230;
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    .date-popover.hidden {
+      display: none;
+    }
+
+    .date-popover-portal {
+      z-index: 9999;
+    }
+
+    .date-pop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .date-pop-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .date-pop-nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .date-pop-nav button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .date-pop-nav button:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .date-pop-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .date-pop-year {
+      width: 72px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 4px 8px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .date-pop-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      text-align: center;
+    }
+
+    .date-pop-dow {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 6px 0;
+    }
+
+    .date-pop-day {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 12.5px;
+      padding: 7px 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .date-pop-day:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .date-pop-day.muted {
+      color: var(--muted);
+      opacity: 0.45;
+    }
+
+    .date-pop-day.today {
+      border: 1px solid var(--border2);
+    }
+
+    .date-pop-day.selected {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .date-pop-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .date-pop-footer button {
+      background: transparent;
+      border: none;
+      color: var(--blue-light);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .date-pop-footer button:hover {
+      text-decoration: underline;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: scale(.96);
+    }
+
+    .btn:disabled {
+      opacity: .3;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .btn-orange {
+      background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+      color: #070a0f;
+      box-shadow: 0 4px 15px rgba(232, 146, 74, 0.2);
+    }
+
+    .btn-orange:not(:disabled):hover {
+      box-shadow: 0 6px 25px rgba(232, 146, 74, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-light) 100%);
+      color: #070a0f;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-green:not(:disabled):hover {
+      box-shadow: 0 6px 25px rgba(16, 185, 129, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-blue {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-blue:not(:disabled):hover {
+      box-shadow: 0 6px 25px rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-ghost:not(:disabled):hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    /* Pills */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: .02em;
+    }
+
+    .p-green {
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .p-blue {
+      background: rgba(59, 130, 246, 0.1);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .p-red {
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .p-orange {
+      background: rgba(232, 146, 74, 0.1);
+      color: #ffb574;
+      border: 1px solid rgba(232, 146, 74, 0.2);
+    }
+
+    .p-yellow {
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .p-gray {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Step badges */
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+      color: #070a0f;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+      box-shadow: 0 0 15px rgba(232, 146, 74, 0.25);
+    }
+
+    /* Config Grid */
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media(max-width:600px) {
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Info banners */
+    .info-strip {
+      background: rgba(59, 130, 246, 0.04);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 12.5px;
+      color: #93c5fd;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .info-strip svg {
+      color: var(--blue-light);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* Slider */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.05);
+      height: 6px;
+      border-radius: 99px;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, var(--accent) 0%, #ffaa60 100%);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(232, 146, 74, 0.4);
+      transition: transform 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Progress bar */
+    .progress-track {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue) 0%, var(--blue-light) 100%);
+      border-radius: 99px;
+      transition: width .15s;
+    }
+
+    /* Stats */
+    .stats-grid-5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    @media(max-width: 900px) {
+      .stats-grid-5 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media(max-width: 600px) {
+      .stats-grid-5 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stat-card {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 12px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: transparent;
+    }
+
+    .stat-card.sc-green::before {
+      background: var(--green);
+    }
+
+    .stat-card.sc-blue::before {
+      background: var(--blue);
+    }
+
+    .stat-card.sc-red::before {
+      background: var(--red);
+    }
+
+    .stat-card.sc-yellow::before {
+      background: var(--yellow);
+    }
+
+    .stat-card.sc-muted::before {
+      background: var(--muted);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    /* Table rules */
+    .table-container {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-height: 480px;
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #0f141c;
+    }
+
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+      transition: all 0.15s ease;
+    }
+
+    tr.left-row td {
+      background: rgba(239, 68, 68, 0.03);
+    }
+
+    tr.new-row td {
+      background: rgba(16, 185, 129, 0.03);
+    }
+
+    tr.change-row td {
+      background: rgba(245, 158, 11, 0.02);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.04) !important;
+    }
+
+    .diff-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+    }
+
+    .diff-val.pos {
+      color: var(--green-light);
+    }
+
+    .diff-val.neg {
+      color: var(--red-light);
+    }
+
+    .diff-val.zero {
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-mesh"></div>
+  <div class="glow-orb-orange"></div>
+  <div class="glow-orb-blue"></div>
+
+  <div class="app-container">
+
+    <!-- Navigation Header -->
+    <header class="nav-header">
+      <a href="index.html" class="nav-brand">
+        <div class="nav-logo">
+          <svg width="20" height="20" fill="none" stroke="#070a0f" stroke-width="2.5" viewBox="0 0 24 24">
+            <path
+              d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+              stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="nav-title">Hedge Pensions</span>
+      </a>
+      <div class="flex items-center gap-4">
+        <a href="app.html"
+          class="text-xs uppercase tracking-[0.1em] font-extrabold text-slate-400 hover:text-[#ffaa60] transition-colors">Smart
+          Matcher</a>
+        <div class="nav-badge">
+          Schedule Comparer
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Title -->
+    <div class="hero-section">
+      <h1 class="hero-title">Schedule Comparer <span class="accent-plus">&amp;</span> Roll-forward</h1>
+      <p class="hero-subtitle">Compare the previous month's final submission schedule to a new month's list to spot
+        additions, departures, and salary anomalies instantly.</p>
+    </div>
+
+    <!-- STEP 1: Upload and Map -->
+    <div class="card">
+      <div class="card-header">
+        <span class="step-num">1</span>
+        <h2 class="card-title">Upload &amp; Map Schedules</h2>
+      </div>
+
+      <div class="grid-2">
+        <!-- Previous Month Submission Sheet Upload & Mapping -->
+        <div>
+          <div class="card-sm" style="margin-bottom:12px">
+            <div
+              style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">
+              PREVIOUS MONTH FINAL SUBMISSION</div>
+            <div class="drop-zone" id="drop-prev">
+              <input type="file" id="input-prev" accept=".xlsx,.xls">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path
+                  d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span id="label-prev" class="drop-zone-text">Upload previous month submission (.xlsx)</span>
+            </div>
+          </div>
+
+          <div id="map-prev" class="hidden card-sm" style="display:flex;flex-direction:column;gap:10px">
+            <div class="mapping-grid">
+              <div><label class="field">First Name *</label><select id="sel-p-first"></select></div>
+              <div><label class="field">Surname *</label><select id="sel-p-last"></select></div>
+              <div class="mapping-span-2"><label class="field">Other Names</label><select id="sel-p-other"></select>
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+            <div class="mapping-grid">
+              <div class="mapping-span-2"><label class="field">Membership ID *</label><select id="sel-p-id"></select>
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+            <div class="mapping-grid">
+              <div><label class="field">Basic Salary *</label><select id="sel-p-salary"></select></div>
+              <div><label class="field">2nd Tier *</label><select id="sel-p-tier2"></select></div>
+            </div>
+            <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+            <div class="mapping-grid">
+              <div><label class="field">National ID</label><select id="sel-p-natid"></select></div>
+              <div><label class="field">SSNIT ID</label><select id="sel-p-ssnit"></select></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- New Month Schedule Names List Upload & Mapping -->
+        <div>
+          <div class="card-sm" style="margin-bottom:12px">
+            <div
+              style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">
+              NEW MONTH SCHEDULE LIST</div>
+            <div class="drop-zone" id="drop-new">
+              <input type="file" id="input-new" accept=".xlsx,.xls">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path
+                  d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span id="label-new" class="drop-zone-text">Upload new month schedule list (.xlsx)</span>
+            </div>
+          </div>
+
+          <div id="map-new" class="hidden card-sm" style="display:flex;flex-direction:column;gap:10px">
+            <div class="mapping-grid">
+              <div><label class="field">First Name *</label><select id="sel-n-first"></select></div>
+              <div><label class="field">Last Name *</label><select id="sel-n-last"></select></div>
+              <div class="mapping-span-2"><label class="field">Other Name</label><select id="sel-n-other"></select>
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+            <div class="mapping-grid">
+              <div><label class="field">Basic Salary *</label><select id="sel-n-salary"></select></div>
+              <div><label class="field">2nd Tier *</label><select id="sel-n-tier2"></select></div>
+            </div>
+            <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+            <div class="mapping-grid">
+              <div><label class="field">National ID</label><select id="sel-n-natid"></select></div>
+              <div><label class="field">SSNIT ID</label><select id="sel-n-ssnit"></select></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Roll-forward Final Output Metadata -->
+    <div class="card" id="output-config-panel">
+      <div class="card-header" style="margin-bottom:12px">
+        <span class="step-num">2</span>
+        <h2 class="card-title">New Month Submission Settings</h2>
+        <span class="pill p-blue" style="margin-left:auto">Auto-fill rolled forward schedule</span>
+      </div>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:20px;line-height:1.4">When you generate the New
+        Finalized Submission, these settings apply to the new month's schedule sheet. Branch and Region will default to
+        the values found in your previous month's schedule.</p>
+
+      <div class="config-grid">
+        <div><label class="field">Branch / Management Unit</label><input type="text" id="cfg-branch" value=""
+            placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY"></div>
+        <div><label class="field">Region</label><input type="text" id="cfg-region" value=""
+            placeholder="e.g. EASTERN REGION"></div>
+
+        <div class="date-field" data-datefield>
+          <label class="field">New Month Cycle Date</label>
+          <input type="hidden" id="cfg-cycle" value="">
+          <div class="date-input-wrap">
+            <input type="text" class="date-display" id="cfg-cycle-display" placeholder="mm/dd/yyyy" autocomplete="off"
+              inputmode="numeric" readonly>
+            <svg class="date-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+              viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div class="date-popover hidden"></div>
+        </div>
+
+        <div class="date-field" data-datefield>
+          <label class="field">New Month Investment Date</label>
+          <input type="hidden" id="cfg-invest" value="">
+          <div class="date-input-wrap">
+            <input type="text" class="date-display" id="cfg-invest-display" placeholder="mm/dd/yyyy" autocomplete="off"
+              inputmode="numeric" readonly>
+            <svg class="date-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+              viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div class="date-popover hidden"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px">
+        <label class="field">Output Submission File Name</label>
+        <input type="text" id="cfg-output-name" value=""
+          placeholder="e.g. FANTEAKWA NORTH DISTRICT ASSEMBLY NOVEMBER 2026">
+      </div>
+    </div>
+
+    <!-- STEP 3: Compare schedules -->
+    <div class="card">
+      <div class="card-header">
+        <span class="step-num">3</span>
+        <h2 class="card-title">Run Reconciler</h2>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:24px">
+        <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:8px">
+          <label class="field" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Matching tolerance threshold (Fuse.js)</span>
+            <span id="threshold-val" class="pill p-orange">85%</span>
+          </label>
+          <input type="range" id="threshold" min="50" max="100" value="85" style="width:100%">
+        </div>
+        <button id="btn-process" class="btn btn-orange" disabled style="padding:14px 28px">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Run Comparison
+        </button>
+      </div>
+
+      <div id="progress-container" class="hidden" style="margin-top:20px">
+        <div class="progress-track">
+          <div id="progress-bar" class="progress-fill" style="width:0%"></div>
+        </div>
+        <p id="progress-text" class="mono" style="font-size:12px;text-align:center;color:var(--muted);margin-top:8px">0%
+        </p>
+      </div>
+      <p id="validation-msg" style="font-size:13px;color:var(--red);margin-top:12px;text-align:center;font-weight:500">
+        Please upload schedules and map the required columns</p>
+    </div>
+
+    <!-- Results Dashboard -->
+    <div id="results-area" class="card hidden">
+
+      <!-- Stats Grid -->
+      <div class="stats-grid-5">
+        <div class="stat-card sc-green">
+          <div id="stat-active-ok" style="font-size:24px;font-weight:800;color:var(--green)" class="mono">0</div>
+          <div
+            style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">
+            Unchanged</div>
+        </div>
+        <div class="stat-card sc-yellow">
+          <div id="stat-active-change" style="font-size:24px;font-weight:800;color:var(--yellow)" class="mono">0</div>
+          <div
+            style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">
+            Salary Changed</div>
+        </div>
+        <div class="stat-card sc-blue">
+          <div id="stat-new" style="font-size:24px;font-weight:800;color:var(--blue)" class="mono">0</div>
+          <div
+            style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">
+            New Hires</div>
+        </div>
+        <div class="stat-card sc-red">
+          <div id="stat-left" style="font-size:24px;font-weight:800;color:var(--red)" class="mono">0</div>
+          <div
+            style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">
+            Missing / Left</div>
+        </div>
+        <div class="stat-card sc-muted">
+          <div id="stat-salary-diff"
+            style="font-size:20px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis" class="mono">0.00
+          </div>
+          <div
+            style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">
+            Salary Net Diff</div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <div class="text-base font-extrabold text-white" id="result-count">Comparison Results</div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-download-report" class="btn btn-ghost">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Comparison Report (Excel)
+          </button>
+          <button id="btn-download-rolled" class="btn btn-green">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            Download Submission File
+          </button>
+        </div>
+      </div>
+
+      <!-- Info Strip -->
+      <div class="info-strip mb-4">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4m0 4h.01" stroke-linecap="round" />
+        </svg>
+        <span>The <strong>Download Submission File</strong> button generates a ready-to-submit Excel file in the exact
+          format — Branch, National ID, Membership ID, First Name, Other Names, Surname, SSNIT I.D., dates, salary,
+          tiers, Management Unit, Investment Date, Region — fully pre-filled. Match records inherit Membership IDs and
+          other metadata from the previous month.</span>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="flex flex-col sm:flex-row gap-3 mb-4">
+        <input type="text" id="table-filter" placeholder="Search by name or ID…" style="flex:1">
+        <select id="table-filter-status" style="width:auto;min-width:160px">
+          <option value="all">All Records</option>
+          <option value="unchanged">Unchanged Only</option>
+          <option value="changed">Salary Changed Only</option>
+          <option value="new">New Hires Only</option>
+          <option value="left">Left Employees Only</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee Name</th>
+              <th>Member ID</th>
+              <th class="text-right">Prev Salary</th>
+              <th class="text-right">New Salary</th>
+              <th class="text-right">Salary Diff</th>
+              <th class="text-right">Prev 2nd Tier</th>
+              <th class="text-right">New 2nd Tier</th>
+              <th class="text-right">2nd Tier Diff</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <p id="filter-count" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:right"></p>
+    </div>
+
+  </div>
+
+  <script>
+    // ─── STATE ───────────────────────────────────────────────────────────────────
+    const state = {
+      prevData: [],
+      newData: [],
+      comparedData: [],
+    };
+
+    // ─── DOM REFS ─────────────────────────────────────────────────────────────────
+    const dom = {
+      inputPrev: document.getElementById('input-prev'),
+      inputNew: document.getElementById('input-new'),
+      dropPrev: document.getElementById('drop-prev'),
+      dropNew: document.getElementById('drop-new'),
+      labelPrev: document.getElementById('label-prev'),
+      labelNew: document.getElementById('label-new'),
+      mapPrev: document.getElementById('map-prev'),
+      mapNew: document.getElementById('map-new'),
+
+      selPFirst: document.getElementById('sel-p-first'),
+      selPLast: document.getElementById('sel-p-last'),
+      selPOther: document.getElementById('sel-p-other'),
+      selPId: document.getElementById('sel-p-id'),
+      selPSalary: document.getElementById('sel-p-salary'),
+      selPTier2: document.getElementById('sel-p-tier2'),
+      selPNatId: document.getElementById('sel-p-natid'),
+      selPSsnit: document.getElementById('sel-p-ssnit'),
+
+      selNFirst: document.getElementById('sel-n-first'),
+      selNLast: document.getElementById('sel-n-last'),
+      selNOther: document.getElementById('sel-n-other'),
+      selNSalary: document.getElementById('sel-n-salary'),
+      selNTier2: document.getElementById('sel-n-tier2'),
+      selNNatId: document.getElementById('sel-n-natid'),
+      selNSsnit: document.getElementById('sel-n-ssnit'),
+
+      btnProcess: document.getElementById('btn-process'),
+      btnDownloadReport: document.getElementById('btn-download-report'),
+      btnDownloadRolled: document.getElementById('btn-download-rolled'),
+      thresholdSlider: document.getElementById('threshold'),
+      thresholdVal: document.getElementById('threshold-val'),
+      progressContainer: document.getElementById('progress-container'),
+      progressBar: document.getElementById('progress-bar'),
+      progressText: document.getElementById('progress-text'),
+      validationMsg: document.getElementById('validation-msg'),
+      resultsArea: document.getElementById('results-area'),
+      resultCount: document.getElementById('result-count'),
+
+      statActiveOk: document.getElementById('stat-active-ok'),
+      statActiveChange: document.getElementById('stat-active-change'),
+      statNew: document.getElementById('stat-new'),
+      statLeft: document.getElementById('stat-left'),
+      statSalaryDiff: document.getElementById('stat-salary-diff'),
+
+      tableBody: document.getElementById('table-body'),
+      tableFilter: document.getElementById('table-filter'),
+      tableFilterStatus: document.getElementById('table-filter-status'),
+      filterCount: document.getElementById('filter-count'),
+
+      cfgBranch: document.getElementById('cfg-branch'),
+      cfgRegion: document.getElementById('cfg-region'),
+      cfgCycle: document.getElementById('cfg-cycle'),
+      cfgInvest: document.getElementById('cfg-invest'),
+      cfgOutputName: document.getElementById('cfg-output-name'),
+    };
+
+    // ─── STRING PROCESSING / SOUNDEX / FUZZY MATCHING ────────────────────────────
+    const HONORIFICS = /^(mr|mrs|ms|miss|dr|prof|rev|hon|sir|lady|capt|col|sgt|cpl|pvt|eng|esq)\.?\s+/gi;
+    const NAME_SUFFIXES = /\b(jr|sr|ii|iii|iv|v)\b\.?/gi;
+
+    function stripDiacritics(text) {
+      return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function normalizeName(name) {
+      return stripDiacritics(String(name || '').toLowerCase())
+        .replace(HONORIFICS, '')
+        .replace(NAME_SUFFIXES, '')
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function tokenizeName(name) {
+      return normalizeName(name).split(' ').filter(Boolean);
+    }
+
+    function tokenSignature(tokens) {
+      return [...new Set(tokens)].sort().join(' ');
+    }
+
+    function namePermutations(first, other, last) {
+      const f = normalizeName(first), o = normalizeName(other), l = normalizeName(last);
+      const tokens = [f, o, l].filter(Boolean).join(' ').split(' ').filter(Boolean);
+      return [...new Set([
+        [f, o, l].filter(Boolean).join(' '),
+        [f, l].filter(Boolean).join(' '),
+        [l, f, o].filter(Boolean).join(' '),
+        [l, f].filter(Boolean).join(' '),
+        tokens.join(' '),
+        tokenSignature(tokens),
+      ])].filter(Boolean);
+    }
+
+    const SOUNDEX_CODES = { B: '1', F: '1', P: '1', V: '1', C: '2', G: '2', J: '2', K: '2', Q: '2', S: '2', X: '2', Z: '2', D: '3', T: '3', L: '4', M: '5', N: '5', R: '6' };
+
+    function soundex(token) {
+      const s = String(token || '').toUpperCase().replace(/[^A-Z]/g, '');
+      if (!s) return '';
+      let result = s[0];
+      let prevCode = SOUNDEX_CODES[s[0]] || '';
+      for (let i = 1; i < s.length && result.length < 4; i++) {
+        const c = s[i];
+        const code = SOUNDEX_CODES[c] || '';
+        if (code) {
+          if (code !== prevCode) result += code;
+          prevCode = code;
+        } else if (c !== 'H' && c !== 'W') {
+          prevCode = '';
+        }
+      }
+      return (result + '000').slice(0, 4);
+    }
+
+    function tokenOverlapScore(queryTokens, candidateTokens) {
+      if (!queryTokens.length || !candidateTokens.length) return 0;
+      const querySet = new Set(queryTokens);
+      const candidateSet = new Set(candidateTokens);
+      let matches = 0;
+      querySet.forEach(token => { if (candidateSet.has(token)) matches++; });
+      return matches / Math.max(querySet.size, candidateSet.size);
+    }
+
+    function phoneticTokenOverlapScore(queryTokens, candidateTokens) {
+      if (!queryTokens.length || !candidateTokens.length) return 0;
+      const candidateCodes = new Set(candidateTokens.map(soundex).filter(Boolean));
+      const queryCodes = queryTokens.map(soundex).filter(Boolean);
+      if (!queryCodes.length || !candidateCodes.size) return 0;
+      let matches = 0;
+      new Set(queryCodes).forEach(code => { if (candidateCodes.has(code)) matches++; });
+      return matches / Math.max(new Set(queryCodes).size, candidateCodes.size);
+    }
+
+    function adjustedResultScore(result, queryTokens) {
+      const fuseScore = 1 - result.score;
+      const candidateTokens = result.item.tokens;
+      const overlap = tokenOverlapScore(queryTokens, candidateTokens);
+      const phoneticOverlap = phoneticTokenOverlapScore(queryTokens, candidateTokens);
+      const queryFirst = queryTokens[0] || '';
+      const queryLast = queryTokens[queryTokens.length - 1] || '';
+      const candFirst = candidateTokens[0] || '';
+      const candLast = candidateTokens[candidateTokens.length - 1] || '';
+
+      const firstBonus = queryFirst && candFirst === queryFirst ? 0.06
+        : queryFirst && candFirst && soundex(queryFirst) === soundex(candFirst) ? 0.03 : 0;
+      const lastBonus = queryLast && candLast === queryLast ? 0.08
+        : queryLast && candLast && soundex(queryLast) === soundex(candLast) ? 0.04 : 0;
+      return Math.min(1, fuseScore * 0.55 + overlap * 0.20 + phoneticOverlap * 0.15 + firstBonus + lastBonus);
+    }
+
+    // ─── UPLOAD AND HEADERS ───────────────────────────────────────────────────────
+    function populateSelect(select, headers, autoKeywords) {
+      select.innerHTML = '<option value="">-- Select --</option>';
+      const isOptional = select.id.includes('other') || select.id.includes('natid') || select.id.includes('ssnit');
+      if (isOptional) {
+        select.innerHTML += '<option value="__none__">(No Column)</option>';
+        select.value = '__none__';
+      }
+      headers.forEach(h => {
+        const clean = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const opt = document.createElement('option');
+        opt.value = h; opt.text = h;
+        select.appendChild(opt);
+        if (autoKeywords.some(kw => clean.includes(kw))) select.value = h;
+      });
+    }
+
+    function handleUpload(event, type) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+        if (!rows.length) { alert('File is empty!'); return; }
+        const headers = Object.keys(rows[0]);
+        if (type === 'prev') {
+          state.prevData = rows;
+          dom.dropPrev.classList.add('loaded');
+          dom.labelPrev.textContent = file.name;
+          dom.labelPrev.style.color = 'var(--green)';
+          dom.labelPrev.style.fontWeight = '700';
+          dom.mapPrev.classList.remove('hidden');
+
+          populateSelect(dom.selPFirst, headers, ['first', 'fname', 'given']);
+          populateSelect(dom.selPLast, headers, ['surname', 'last', 'lname', 'family']);
+          populateSelect(dom.selPOther, headers, ['other', 'middle', 'mname']);
+          populateSelect(dom.selPId, headers, ['membership', 'memberid', 'id', 'emp']);
+          populateSelect(dom.selPSalary, headers, ['basic', 'salary', 'wage']);
+          populateSelect(dom.selPTier2, headers, ['2nd', 'second', 'tier2', 'tier_2']);
+          populateSelect(dom.selPNatId, headers, ['national', 'ghanacard', 'nid', 'natid']);
+          populateSelect(dom.selPSsnit, headers, ['ssnit', 'ssnitid', 'ssnitno']);
+
+          // Auto fill Branch and Region metadata if found in previous month's rows
+          const branchCol = headers.find(h => h.toLowerCase().includes('branch') || h.toLowerCase().includes('unit'));
+          const regionCol = headers.find(h => h.toLowerCase().includes('region'));
+          if (branchCol && rows[0][branchCol]) dom.cfgBranch.value = rows[0][branchCol];
+          if (regionCol && rows[0][regionCol]) dom.cfgRegion.value = rows[0][regionCol];
+
+        } else {
+          state.newData = rows;
+          dom.dropNew.classList.add('loaded');
+          dom.labelNew.textContent = file.name;
+          dom.labelNew.style.color = 'var(--green)';
+          dom.labelNew.style.fontWeight = '700';
+          dom.mapNew.classList.remove('hidden');
+
+          populateSelect(dom.selNFirst, headers, ['first', 'fname', 'given']);
+          populateSelect(dom.selNLast, headers, ['last', 'lname', 'surname', 'family']);
+          populateSelect(dom.selNOther, headers, ['other', 'middle', 'mname']);
+          populateSelect(dom.selNSalary, headers, ['basic', 'salary', 'wage']);
+          populateSelect(dom.selNTier2, headers, ['2nd', 'second', 'tier2', 'tier_2']);
+          populateSelect(dom.selNNatId, headers, ['national', 'ghanacard', 'nid', 'natid']);
+          populateSelect(dom.selNSsnit, headers, ['ssnit', 'ssnitid', 'ssnitno']);
+        }
+        validateForm();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function validateForm() {
+      const pReq = [dom.selPFirst, dom.selPLast, dom.selPId, dom.selPSalary, dom.selPTier2];
+      const nReq = [dom.selNFirst, dom.selNLast, dom.selNSalary, dom.selNTier2];
+      const ok = pReq.every(s => s.value !== '') && nReq.every(s => s.value !== '') && state.prevData.length && state.newData.length;
+      dom.btnProcess.disabled = !ok;
+      if (ok) {
+        dom.validationMsg.textContent = 'Schedules loaded. Ready to reconcile.';
+        dom.validationMsg.style.color = 'var(--green)';
+      } else {
+        dom.validationMsg.textContent = 'Please upload schedules and map required columns';
+        dom.validationMsg.style.color = 'var(--red)';
+      }
+    }
+
+    // ─── COMPARER ALGORITHM ───────────────────────────────────────────────────────
+    async function runComparison() {
+      const pKeys = {
+        f: dom.selPFirst.value, o: dom.selPOther.value, l: dom.selPLast.value,
+        id: dom.selPId.value, sal: dom.selPSalary.value, t2: dom.selPTier2.value,
+        nat: dom.selPNatId.value, ssnit: dom.selPSsnit.value
+      };
+      const nKeys = {
+        f: dom.selNFirst.value, o: dom.selNOther.value, l: dom.selNLast.value,
+        sal: dom.selNSalary.value, t2: dom.selNTier2.value,
+        nat: dom.selNNatId.value, ssnit: dom.selNSsnit.value
+      };
+
+      const autoLimit = parseInt(dom.thresholdSlider.value) / 100;
+
+      // Build Prev Month search structure
+      const prevList = state.prevData.map((row, idx) => {
+        const f = String(row[pKeys.f] || '').trim();
+        const o = pKeys.o && pKeys.o !== '__none__' ? String(row[pKeys.o] || '').trim() : '';
+        const l = String(row[pKeys.l] || '').trim();
+        const name = [f, o, l].filter(Boolean).join(' ');
+        const nf = normalizeName(f), no = normalizeName(o), nl = normalizeName(l);
+        const tokens = [nf, no, nl].filter(Boolean).join(' ').split(' ').filter(Boolean);
+        const signature = tokenSignature(tokens);
+        const membershipId = String(row[pKeys.id] || '').trim();
+        const nationalId = pKeys.nat && pKeys.nat !== '__none__' ? String(row[pKeys.nat] || '').trim() : '';
+        const ssnitId = pKeys.ssnit && pKeys.ssnit !== '__none__' ? String(row[pKeys.ssnit] || '').trim() : '';
+
+        return {
+          index: idx,
+          name,
+          fullName: [nf, no, nl].filter(Boolean).join(' '),
+          fullNameRev: [nl, nf, no].filter(Boolean).join(' '),
+          tokenSignature: signature,
+          tokens,
+          id: membershipId,
+          natId: nationalId,
+          ssnitId: ssnitId,
+          raw: row,
+          matched: false,
+        };
+      });
+
+      // Build exact index map for fast checks
+      const exactNameMap = new Map();
+      const natIdMap = new Map();
+      const ssnitMap = new Map();
+
+      prevList.forEach(item => {
+        if (item.fullName) {
+          if (!exactNameMap.has(item.fullName)) exactNameMap.set(item.fullName, []);
+          exactNameMap.get(item.fullName).push(item);
+        }
+        if (item.fullNameRev) {
+          if (!exactNameMap.has(item.fullNameRev)) exactNameMap.set(item.fullNameRev, []);
+          exactNameMap.get(item.fullNameRev).push(item);
+        }
+        if (item.tokenSignature) {
+          if (!exactNameMap.has(item.tokenSignature)) exactNameMap.set(item.tokenSignature, []);
+          exactNameMap.get(item.tokenSignature).push(item);
+        }
+        if (item.natId) {
+          if (!natIdMap.has(item.natId)) natIdMap.set(item.natId, []);
+          natIdMap.get(item.natId).push(item);
+        }
+        if (item.ssnitId) {
+          if (!ssnitMap.has(item.ssnitId)) ssnitMap.set(item.ssnitId, []);
+          ssnitMap.get(item.ssnitId).push(item);
+        }
+      });
+
+      // Build Fuse.js Index for Prev Month Name Fuzzy matching
+      const fuseName = new Fuse(prevList, {
+        keys: ['fullName', 'fullNameRev', 'tokenSignature'],
+        includeScore: true,
+        threshold: 0.45,
+        ignoreLocation: true
+      });
+      const fuseWeighted = new Fuse(prevList, {
+        keys: [
+          { name: 'fullName', weight: 0.5 },
+          { name: 'tokenSignature', weight: 0.5 }
+        ],
+        includeScore: true,
+        threshold: 0.45,
+        ignoreLocation: true
+      });
+
+      state.comparedData = [];
+
+      // Match each row in the NEW month schedule list
+      for (let i = 0; i < state.newData.length; i++) {
+        const newRow = state.newData[i];
+        const nfName = String(newRow[nKeys.f] || '').trim();
+        const noName = nKeys.o && nKeys.o !== '__none__' ? String(newRow[nKeys.o] || '').trim() : '';
+        const nlName = String(newRow[nKeys.l] || '').trim();
+        const newDispName = [nfName, noName, nlName].filter(Boolean).join(' ');
+
+        const newNatId = nKeys.nat && nKeys.nat !== '__none__' ? String(newRow[nKeys.nat] || '').trim() : '';
+        const newSsnitId = nKeys.ssnit && nKeys.ssnit !== '__none__' ? String(newRow[nKeys.ssnit] || '').trim() : '';
+
+        const newSal = parseFloat(String(newRow[nKeys.sal]).replace(/[^0-9.-]/g, '')) || 0;
+        const newT2 = parseFloat(String(newRow[nKeys.t2]).replace(/[^0-9.-]/g, '')) || 0;
+
+        let matchedItem = null;
+        let matchMethod = 'None';
+        let confidence = 0;
+
+        // 1. Try Exact National ID Match
+        if (newNatId && natIdMap.has(newNatId)) {
+          const candidates = natIdMap.get(newNatId).filter(c => !c.matched);
+          if (candidates.length > 0) {
+            matchedItem = candidates[0];
+            matchMethod = 'National ID (Exact)';
+            confidence = 1.0;
+          }
+        }
+
+        // 2. Try Exact SSNIT ID Match
+        if (!matchedItem && newSsnitId && ssnitMap.has(newSsnitId)) {
+          const candidates = ssnitMap.get(newSsnitId).filter(c => !c.matched);
+          if (candidates.length > 0) {
+            matchedItem = candidates[0];
+            matchMethod = 'SSNIT ID (Exact)';
+            confidence = 1.0;
+          }
+        }
+
+        // 3. Try Exact Name Match
+        if (!matchedItem) {
+          const normQueryName = normalizeName(newDispName);
+          if (exactNameMap.has(normQueryName)) {
+            const candidates = exactNameMap.get(normQueryName).filter(c => !c.matched);
+            if (candidates.length > 0) {
+              matchedItem = candidates[0];
+              matchMethod = 'Name (Exact)';
+              confidence = 1.0;
+            }
+          }
+        }
+
+        // 4. Try Fuzzy Match with Permutations
+        if (!matchedItem) {
+          const perms = namePermutations(nfName, noName, nlName);
+          const queryTokens = tokenizeName(newDispName);
+          let bestResult = null;
+          let bestScore = -1;
+
+          for (const q of perms) {
+            const r1 = fuseName.search(q, { limit: 5 });
+            const r2 = fuseWeighted.search(q, { limit: 5 });
+            const combined = [...r1, ...r2];
+            combined.forEach(res => {
+              const adj = adjustedResultScore(res, queryTokens);
+              if (adj > bestScore && !res.item.matched) {
+                bestScore = adj;
+                bestResult = res.item;
+              }
+            });
+          }
+
+          if (bestResult && bestScore >= autoLimit) {
+            matchedItem = bestResult;
+            matchMethod = 'Fuzzy Name';
+            confidence = bestScore;
+          }
+        }
+
+        // Process matched or unmatched row
+        if (matchedItem) {
+          matchedItem.matched = true;
+          const oldSal = parseFloat(String(matchedItem.raw[pKeys.sal]).replace(/[^0-9.-]/g, '')) || 0;
+          const oldT2 = parseFloat(String(matchedItem.raw[pKeys.t2]).replace(/[^0-9.-]/g, '')) || 0;
+
+          const salDiff = newSal - oldSal;
+          const t2Diff = newT2 - oldT2;
+          const unchanged = Math.abs(salDiff) < 0.01 && Math.abs(t2Diff) < 0.01;
+
+          state.comparedData.push({
+            name: newDispName,
+            id: matchedItem.id,
+            status: unchanged ? 'Active (Unchanged)' : 'Active (Salary Changed)',
+            prevSalary: oldSal,
+            newSalary: newSal,
+            salaryDiff: salDiff,
+            prevTier2: oldT2,
+            newTier2: newT2,
+            tier2Diff: t2Diff,
+            matchMethod: matchMethod,
+            confidence: confidence,
+            prevRow: matchedItem.raw,
+            newRow: newRow,
+          });
+        } else {
+          // New Hire
+          state.comparedData.push({
+            name: newDispName,
+            id: 'NOT FOUND',
+            status: 'New Hire',
+            prevSalary: 0,
+            newSalary: newSal,
+            salaryDiff: newSal,
+            prevTier2: 0,
+            newTier2: newT2,
+            tier2Diff: newT2,
+            matchMethod: 'None',
+            confidence: 0,
+            prevRow: null,
+            newRow: newRow,
+          });
+        }
+
+        // Update progress bar
+        const pct = Math.round(((i + 1) / state.newData.length) * 100);
+        dom.progressBar.style.width = pct + '%';
+        dom.progressText.textContent = pct + '%';
+        if (i % 50 === 0) await new Promise(r => setTimeout(r, 0));
+      }
+
+      // Identify unmatched Previous Month employees (Departed/Left)
+      prevList.forEach(item => {
+        if (!item.matched) {
+          const oldSal = parseFloat(String(item.raw[pKeys.sal]).replace(/[^0-9.-]/g, '')) || 0;
+          const oldT2 = parseFloat(String(item.raw[pKeys.t2]).replace(/[^0-9.-]/g, '')) || 0;
+
+          state.comparedData.push({
+            name: item.name,
+            id: item.id,
+            status: 'Left Employee',
+            prevSalary: oldSal,
+            newSalary: 0,
+            salaryDiff: -oldSal,
+            prevTier2: oldT2,
+            newTier2: 0,
+            tier2Diff: -oldT2,
+            matchMethod: 'None',
+            confidence: 0,
+            prevRow: item.raw,
+            newRow: null,
+          });
+        }
+      });
+
+      return state.comparedData;
+    }
+
+    // ─── RENDER RESULTS ───────────────────────────────────────────────────────────
+    function renderResults() {
+      const unchanged = state.comparedData.filter(r => r.status === 'Active (Unchanged)').length;
+      const changed = state.comparedData.filter(r => r.status === 'Active (Salary Changed)').length;
+      const newHires = state.comparedData.filter(r => r.status === 'New Hire').length;
+      const left = state.comparedData.filter(r => r.status === 'Left Employee').length;
+
+      // Calculate Net salary difference
+      const totalPrevSal = state.comparedData.reduce((acc, r) => acc + r.prevSalary, 0);
+      const totalNewSal = state.comparedData.reduce((acc, r) => acc + r.newSalary, 0);
+      const netDiff = totalNewSal - totalPrevSal;
+
+      dom.statActiveOk.textContent = unchanged;
+      dom.statActiveChange.textContent = changed;
+      dom.statNew.textContent = newHires;
+      dom.statLeft.textContent = left;
+
+      dom.statSalaryDiff.textContent = (netDiff >= 0 ? '+' : '') + netDiff.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      dom.statSalaryDiff.className = `mono text-[20px] font-extrabold ${netDiff > 0 ? 'text-emerald-400' : netDiff < 0 ? 'text-rose-400' : 'text-slate-100'}`;
+
+      dom.resultCount.textContent = `Compared ${state.comparedData.length} total records`;
+      dom.resultsArea.classList.remove('hidden');
+
+      filterTable();
+    }
+
+    function filterTable() {
+      const query = dom.tableFilter.value.toLowerCase();
+      const statusFilter = dom.tableFilterStatus.value;
+
+      const filtered = state.comparedData.filter(r => {
+        const matchesQuery = !query || r.name.toLowerCase().includes(query) || r.id.toLowerCase().includes(query);
+        let matchesStatus = true;
+        if (statusFilter === 'unchanged') matchesStatus = r.status === 'Active (Unchanged)';
+        else if (statusFilter === 'changed') matchesStatus = r.status === 'Active (Salary Changed)';
+        else if (statusFilter === 'new') matchesStatus = r.status === 'New Hire';
+        else if (statusFilter === 'left') matchesStatus = r.status === 'Left Employee';
+        return matchesQuery && matchesStatus;
+      });
+
+      dom.tableBody.innerHTML = filtered.map(r => {
+        let rowClass = '';
+        let statusPill = '';
+        if (r.status === 'Active (Unchanged)') {
+          statusPill = `<span class="pill p-gray">Unchanged</span>`;
+        } else if (r.status === 'Active (Salary Changed)') {
+          rowClass = 'change-row';
+          statusPill = `<span class="pill p-yellow">Sal Changed</span>`;
+        } else if (r.status === 'New Hire') {
+          rowClass = 'new-row';
+          statusPill = `<span class="pill p-blue">New Hire</span>`;
+        } else if (r.status === 'Left Employee') {
+          rowClass = 'left-row';
+          statusPill = `<span class="pill p-red">Left</span>`;
+        }
+
+        const fmtCurr = val => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const salDiffText = r.salaryDiff > 0.01 ? `+${fmtCurr(r.salaryDiff)}` : fmtCurr(r.salaryDiff);
+        const salDiffClass = r.salaryDiff > 0.01 ? 'pos' : r.salaryDiff < -0.01 ? 'neg' : 'zero';
+
+        const t2DiffText = r.tier2Diff > 0.01 ? `+${fmtCurr(r.tier2Diff)}` : fmtCurr(r.tier2Diff);
+        const t2DiffClass = r.tier2Diff > 0.01 ? 'pos' : r.tier2Diff < -0.01 ? 'neg' : 'zero';
+
+        return `
+      <tr class="${rowClass}">
+        <td style="font-weight:600">${r.name}</td>
+        <td class="mono" style="font-size:11.5px">${r.id}</td>
+        <td class="mono text-right">${fmtCurr(r.prevSalary)}</td>
+        <td class="mono text-right">${fmtCurr(r.newSalary)}</td>
+        <td class="text-right diff-val ${salDiffClass}">${salDiffText}</td>
+        <td class="mono text-right">${fmtCurr(r.prevTier2)}</td>
+        <td class="mono text-right">${fmtCurr(r.newTier2)}</td>
+        <td class="text-right diff-val ${t2DiffClass}">${t2DiffText}</td>
+        <td>${statusPill}</td>
+      </tr>
+    `;
+      }).join('');
+
+      dom.filterCount.textContent = `Showing ${filtered.length} of ${state.comparedData.length}`;
+    }
+
+    // ─── DOWNLOADS: COMPARISON REPORT ────────────────────────────────────────────
+    function downloadComparisonReport() {
+      const rows = state.comparedData.map(r => ({
+        'Employee Name': r.name,
+        'Membership ID': r.id,
+        'Status': r.status,
+        'Previous Month Salary': r.prevSalary,
+        'New Month Salary': r.newSalary,
+        'Salary Difference': r.salaryDiff,
+        'Previous Month 2nd Tier': r.prevTier2,
+        'New Month 2nd Tier': r.newTier2,
+        '2nd Tier Difference': r.tier2Diff,
+        'Match Mechanism': r.matchMethod,
+        'Confidence Score': r.confidence > 0 ? `${(r.confidence * 100).toFixed(1)}%` : '-',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+
+      // Format columns
+      ws['!cols'] = [
+        { wch: 28 }, // Name
+        { wch: 16 }, // ID
+        { wch: 20 }, // Status
+        { wch: 22 }, // Prev Salary
+        { wch: 20 }, // New Salary
+        { wch: 18 }, // Sal Diff
+        { wch: 22 }, // Prev Tier 2
+        { wch: 20 }, // New Tier 2
+        { wch: 18 }, // Tier 2 Diff
+        { wch: 22 }, // Match Mechanism
+        { wch: 16 }, // Confidence
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Comparison Report');
+      XLSX.writeFile(wb, 'Schedule_Comparison_Report.xlsx');
+    }
+
+    // ─── DOWNLOADS: ROLLED-FORWARD SUBMISSION FILE ────────────────────────────────
+    function isoToMDY(isoDate) {
+      const parts = String(isoDate || '').split('-');
+      if (parts.length !== 3) return isoDate || '';
+      const [y, m, d] = parts;
+      if (!y || !m || !d) return isoDate || '';
+      return `${parseInt(m, 10)}/${parseInt(d, 10)}/${y}`;
+    }
+
+    function formatExcelDate(val) {
+      if (!val) return '';
+      // If it's a number (Excel serial date)
+      if (!isNaN(val) && Number(val) > 0) {
+        const date = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
+        return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+      }
+      // If it's a Date object
+      if (val instanceof Date) {
+        return `${val.getMonth() + 1}/${val.getDate()}/${val.getFullYear()}`;
+      }
+      // If it's a string, see if it has YYYY-MM-DD or is already in M/D/YYYY
+      const str = String(val).trim();
+      if (str.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return isoToMDY(str);
+      }
+      return str;
+    }
+
+    function downloadRolledForwardFile() {
+      const pKeys = {
+        f: dom.selPFirst.value, o: dom.selPOther.value, l: dom.selPLast.value,
+        id: dom.selPId.value, sal: dom.selPSalary.value, t2: dom.selPTier2.value,
+        nat: dom.selPNatId.value, ssnit: dom.selPSsnit.value
+      };
+      const nKeys = {
+        f: dom.selNFirst.value, o: dom.selNOther.value, l: dom.selNLast.value,
+        sal: dom.selNSalary.value, t2: dom.selNTier2.value,
+        nat: dom.selNNatId.value, ssnit: dom.selNSsnit.value
+      };
+
+      const branch = dom.cfgBranch.value.trim() || '';
+      const region = dom.cfgRegion.value.trim() || '';
+      const cycle = isoToMDY(dom.cfgCycle.value.trim());
+      const invest = isoToMDY(dom.cfgInvest.value.trim());
+      const outputName = dom.cfgOutputName.value.trim();
+
+      const headers = [
+        'Branch', 'National ID', 'Membership ID', 'First Name', 'Other Names', 'Surname',
+        'SSNIT I.D.', 'Date of Birth (M/D/YYYY)', 'Start Date (M/D/YYYY)', 'Cycle Date (M/D/YYYY)',
+        'Basic Salary', '2nd Tier', '3rd Tier ER', '3rd Tier EE',
+        'Management Unit', 'Investment Date (M/D/YYYY)', 'Region'
+      ];
+
+      // Filters out left employees since they aren't working/contributing in the new month
+      const activeRows = state.comparedData.filter(r => r.status !== 'Left Employee');
+
+      const rows = activeRows.map(r => {
+        const newSrc = r.newRow || {};
+        const firstName = String(newSrc[nKeys.f] || '').trim();
+        const otherNames = nKeys.o && nKeys.o !== '__none__' ? String(newSrc[nKeys.o] || '').trim() : '';
+        const surname = String(newSrc[nKeys.l] || '').trim();
+
+        // Read DOB and Start Date if matching prev month row is available
+        let dob = '';
+        let startDate = '';
+
+        if (r.prevRow) {
+          const keys = Object.keys(r.prevRow);
+          const dobKey = keys.find(k => k.toLowerCase().includes('birth') || k.toLowerCase().includes('dob'));
+          const startKey = keys.find(k => k.toLowerCase().includes('start') || k.toLowerCase().includes('date of join') || k.toLowerCase().includes('joining'));
+          if (dobKey) dob = formatExcelDate(r.prevRow[dobKey]);
+          if (startKey) startDate = formatExcelDate(r.prevRow[startKey]);
+        }
+
+        let nationalId = nKeys.nat && nKeys.nat !== '__none__' ? String(newSrc[nKeys.nat] || '').trim() : '';
+        let ssnitId = nKeys.ssnit && nKeys.ssnit !== '__none__' ? String(newSrc[nKeys.ssnit] || '').trim() : '';
+
+        if (r.prevRow) {
+          if (!nationalId && pKeys.nat && pKeys.nat !== '__none__') {
+            nationalId = String(r.prevRow[pKeys.nat] || '').trim();
+          }
+          if (!ssnitId && pKeys.ssnit && pKeys.ssnit !== '__none__') {
+            ssnitId = String(r.prevRow[pKeys.ssnit] || '').trim();
+          }
+        }
+
+        return {
+          'Branch': branch,
+          'National ID': nationalId,
+          'Membership ID': r.id,
+          'First Name': firstName,
+          'Other Names': otherNames,
+          'Surname': surname,
+          'SSNIT I.D.': ssnitId,
+          'Date of Birth (M/D/YYYY)': dob,
+          'Start Date (M/D/YYYY)': startDate,
+          'Cycle Date (M/D/YYYY)': cycle,
+          'Basic Salary': r.newSalary,
+          '2nd Tier': r.newTier2,
+          '3rd Tier ER': 0,
+          '3rd Tier EE': 0,
+          'Management Unit': branch,
+          'Investment Date (M/D/YYYY)': invest,
+          'Region': region,
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+      // Highlight NOT FOUND rows in light red
+      rows.forEach((row, rowIdx) => {
+        if (row['Membership ID'] === 'NOT FOUND') {
+          const range = XLSX.utils.decode_range(ws['!ref']);
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const cellAddr = XLSX.utils.encode_cell({ r: rowIdx + 1, c: C });
+            if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
+            ws[cellAddr].s = {
+              fill: { fgColor: { rgb: 'FEE2E2' } },
+              font: { color: { rgb: 'B91C1C' } },
+            };
+          }
+        }
+      });
+
+      // Set widths
+      ws['!cols'] = [
+        { wch: 36 }, // Branch
+        { wch: 14 }, // National ID
+        { wch: 16 }, // Membership ID
+        { wch: 14 }, // First Name
+        { wch: 14 }, // Other Names
+        { wch: 16 }, // Surname
+        { wch: 18 }, // SSNIT I.D.
+        { wch: 20 }, // DOB
+        { wch: 20 }, // Start Date
+        { wch: 20 }, // Cycle Date
+        { wch: 13 }, // Basic Salary
+        { wch: 10 }, // 2nd Tier
+        { wch: 11 }, // 3rd Tier ER
+        { wch: 11 }, // 3rd Tier EE
+        { wch: 36 }, // Management Unit
+        { wch: 22 }, // Investment Date
+        { wch: 16 }, // Region
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+      function safeFileName(name) {
+        return String(name || '').replace(/[\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+
+      const today = new Date();
+      const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+      const monthName = monthNames[today.getMonth()];
+      const yyyy = today.getFullYear();
+      const safeBranch = branch.replace(/[\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+
+      const fallbackName = `${safeBranch ? `${safeBranch} ` : ''}${monthName} ${yyyy}.xlsx`;
+      const sanitizedOutputName = outputName ? safeFileName(outputName) : '';
+      const customName = sanitizedOutputName ? `${sanitizedOutputName}.xlsx` : fallbackName;
+
+      XLSX.writeFile(wb, customName);
+    }
+
+    // ─── EXECUTION HANDLER ────────────────────────────────────────────────────────
+    async function handleRunComparison() {
+      dom.btnProcess.disabled = true;
+      dom.validationMsg.textContent = '';
+      dom.progressContainer.classList.remove('hidden');
+      dom.progressBar.style.width = '0%';
+      dom.progressText.textContent = '0%';
+      dom.resultsArea.classList.add('hidden');
+
+      await runComparison();
+
+      dom.progressText.textContent = 'Complete!';
+      renderResults();
+      dom.btnProcess.disabled = false;
+      setTimeout(() => dom.progressContainer.classList.add('hidden'), 3000);
+    }
+
+    // ─── EVENTS ───────────────────────────────────────────────────────────────────
+    dom.inputPrev.addEventListener('change', e => handleUpload(e, 'prev'));
+    dom.inputNew.addEventListener('change', e => handleUpload(e, 'new'));
+    dom.btnProcess.addEventListener('click', handleRunComparison);
+    dom.btnDownloadReport.addEventListener('click', downloadComparisonReport);
+    dom.btnDownloadRolled.addEventListener('click', downloadRolledForwardFile);
+
+    dom.thresholdSlider.addEventListener('input', () => {
+      dom.thresholdVal.textContent = dom.thresholdSlider.value + '%';
+    });
+
+    dom.tableFilter.addEventListener('input', filterTable);
+    dom.tableFilterStatus.addEventListener('change', filterTable);
+
+    const allSelects = [
+      dom.selPFirst, dom.selPLast, dom.selPOther, dom.selPId, dom.selPSalary, dom.selPTier2, dom.selPNatId, dom.selPSsnit,
+      dom.selNFirst, dom.selNLast, dom.selNOther, dom.selNSalary, dom.selNTier2, dom.selNNatId, dom.selNSsnit
+    ];
+    allSelects.forEach(select => select.addEventListener('change', validateForm));
+
+    // ─── CUSTOM DATE PICKER (always mm/dd/yyyy — independent of browser/OS locale) ─
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function initDatePicker(hiddenId, displayId) {
+      const hidden = document.getElementById(hiddenId);
+      const display = document.getElementById(displayId);
+      const field = display.closest('[data-datefield]');
+      const popover = field.querySelector('.date-popover');
+
+      popover.classList.add('date-popover-portal');
+      document.body.appendChild(popover);
+
+      function positionPopover() {
+        const rect = display.getBoundingClientRect();
+        popover.style.position = 'fixed';
+        popover.style.top = `${rect.bottom + 6}px`;
+        popover.style.left = `${rect.left}px`;
+      }
+
+      let viewDate = new Date();
+      let selected = null;
+
+      function isoOf(d) {
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      }
+      function mdyOf(d) {
+        return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
+      }
+      function setSelected(d) {
+        selected = d;
+        hidden.value = d ? isoOf(d) : '';
+        display.value = d ? mdyOf(d) : '';
+      }
+      function sameDay(a, b) {
+        return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+      }
+      function parseDisplayDate(value) {
+        const match = String(value || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (!match) return null;
+        const [, mo, da, yr] = match;
+        const date = new Date(Number(yr), Number(mo) - 1, Number(da));
+        if (date.getFullYear() !== Number(yr) || date.getMonth() !== Number(mo) - 1 || date.getDate() !== Number(da)) {
+          return null;
+        }
+        return date;
+      }
+
+      function render() {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const year = viewDate.getFullYear();
+        const month = viewDate.getMonth();
+        const firstOfMonth = new Date(year, month, 1);
+        const startWeekday = firstOfMonth.getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+        const today = new Date();
+
+        let cells = '';
+        for (let i = startWeekday - 1; i >= 0; i--) {
+          const dayNum = daysInPrevMonth - i;
+          cells += `<button type="button" class="date-pop-day muted" data-nav="prev" data-day="${dayNum}">${dayNum}</button>`;
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+          const cellDate = new Date(year, month, day);
+          const classes = ['date-pop-day'];
+          if (sameDay(cellDate, today)) classes.push('today');
+          if (sameDay(cellDate, selected)) classes.push('selected');
+          cells += `<button type="button" class="${classes.join(' ')}" data-day="${day}">${day}</button>`;
+        }
+        const totalCells = startWeekday + daysInMonth;
+        const trailingDays = (7 - (totalCells % 7)) % 7;
+        for (let day = 1; day <= trailingDays; day++) {
+          cells += `<button type="button" class="date-pop-day muted" data-nav="next" data-day="${day}">${day}</button>`;
+        }
+
+        popover.innerHTML = `
+      <div class="date-pop-header">
+        <div class="date-pop-title-row">
+          <select class="date-pop-month" aria-label="Month">
+            ${monthNames.map((name, idx) => `<option value="${idx}" ${idx === month ? 'selected' : ''}>${name}</option>`).join('')}
+          </select>
+          <input type="number" class="date-pop-year" min="1900" max="9999" value="${year}" aria-label="Year">
+        </div>
+        <div class="date-pop-nav">
+          <button type="button" data-act="prev-month" aria-label="Previous month">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" data-act="next-month" aria-label="Next month">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="date-pop-grid">
+        ${['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => `<div class="date-pop-dow">${d}</div>`).join('')}
+        ${cells}
+      </div>
+      <div class="date-pop-footer">
+        <button type="button" data-act="clear">Clear</button>
+        <button type="button" data-act="today">Today</button>
+      </div>
+    `;
+      }
+
+      function open() {
+        const parsedDate = parseDisplayDate(display.value);
+        if (parsedDate) {
+          selected = parsedDate;
+          viewDate = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1);
+        } else if (selected) {
+          viewDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+        } else {
+          viewDate = new Date();
+        }
+        render();
+        positionPopover();
+        popover.classList.remove('hidden');
+      }
+
+      function close() {
+        popover.classList.add('hidden');
+      }
+
+      display.addEventListener('click', () => {
+        const wasHidden = popover.classList.contains('hidden');
+        document.querySelectorAll('.date-popover').forEach(p => p.classList.add('hidden'));
+        if (wasHidden) open();
+      });
+
+      window.addEventListener('scroll', () => { if (!popover.classList.contains('hidden')) positionPopover(); }, true);
+      window.addEventListener('resize', () => { if (!popover.classList.contains('hidden')) positionPopover(); });
+
+      display.addEventListener('input', () => {
+        const parsed = parseDisplayDate(display.value);
+        if (parsed) {
+          setSelected(parsed);
+          viewDate = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+          render();
+        }
+      });
+
+      display.addEventListener('blur', () => {
+        const parsed = parseDisplayDate(display.value);
+        if (parsed) {
+          setSelected(parsed);
+          return;
+        }
+        if (display.value.trim() === '') {
+          setSelected(null);
+          return;
+        }
+        display.value = selected ? mdyOf(selected) : '';
+      });
+
+      popover.addEventListener('input', (event) => {
+        if (event.target.matches('.date-pop-year')) {
+          const year = parseInt(event.target.value, 10);
+          if (year >= 1900 && year <= 9999) {
+            viewDate.setFullYear(year);
+            render();
+          }
+        }
+      });
+
+      popover.addEventListener('change', (event) => {
+        if (event.target.matches('.date-pop-month')) {
+          const month = parseInt(event.target.value, 10);
+          if (!Number.isNaN(month) && month >= 0 && month <= 11) {
+            viewDate.setMonth(month);
+            render();
+          }
+        }
+      });
+
+      popover.addEventListener('click', (event) => {
+        const btn = event.target.closest('button');
+        if (!btn) return;
+        if (btn.dataset.act === 'prev-month') {
+          viewDate.setMonth(viewDate.getMonth() - 1);
+          render();
+          return;
+        }
+        if (btn.dataset.act === 'next-month') {
+          viewDate.setMonth(viewDate.getMonth() + 1);
+          render();
+          return;
+        }
+        if (btn.dataset.act === 'clear') {
+          setSelected(null);
+          close();
+          return;
+        }
+        if (btn.dataset.act === 'today') {
+          const today = new Date();
+          setSelected(today);
+          viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+          render();
+          close();
+          return;
+        }
+        if (!btn.dataset.day) return;
+
+        const day = Number(btn.dataset.day);
+        if (btn.dataset.nav === 'prev') {
+          viewDate.setMonth(viewDate.getMonth() - 1);
+          setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
+          close();
+          return;
+        }
+        if (btn.dataset.nav === 'next') {
+          viewDate.setMonth(viewDate.getMonth() + 1);
+          setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
+          close();
+          return;
+        }
+        setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
+        close();
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!field.contains(event.target) && !popover.contains(event.target)) close();
+      });
+    }
+
+    initDatePicker('cfg-cycle', 'cfg-cycle-display');
+    initDatePicker('cfg-invest', 'cfg-invest-display');
+
+    validateForm();
+  </script>
+</body>
+
+</html>

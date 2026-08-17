@@ -398,6 +398,21 @@ input[type=date]::-webkit-calendar-picker-indicator {
   color: #fff;
   background: rgba(255,255,255,0.06);
 }
+.date-pop-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.date-pop-year {
+  width: 72px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 4px 8px;
+  font-size: 12px;
+  text-align: center;
+}
 .date-pop-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -863,8 +878,11 @@ tr:hover td {
       </div>
       <span class="nav-title">Hedge Pensions</span>
     </a>
-    <div class="nav-badge">
-      Smart Matcher Tool
+    <div class="flex items-center gap-4">
+      <a href="compare.html" class="text-xs uppercase tracking-[0.1em] font-extrabold text-slate-400 hover:text-[#ffaa60] transition-colors">Schedule Comparer</a>
+      <div class="nav-badge">
+        Smart Matcher Tool
+      </div>
     </div>
   </header>
 
@@ -956,7 +974,7 @@ tr:hover td {
         <label class="field">Cycle Date</label>
         <input type="hidden" id="cfg-cycle" value="">
         <div class="date-input-wrap">
-          <input type="text" class="date-display" id="cfg-cycle-display" placeholder="mm/dd/yyyy" autocomplete="off" inputmode="numeric">
+          <input type="text" class="date-display" id="cfg-cycle-display" placeholder="mm/dd/yyyy" autocomplete="off" inputmode="numeric" readonly>
           <svg class="date-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
         </div>
         <div class="date-popover hidden"></div>
@@ -965,7 +983,7 @@ tr:hover td {
         <label class="field">Investment Date</label>
         <input type="hidden" id="cfg-invest" value="">
         <div class="date-input-wrap">
-          <input type="text" class="date-display" id="cfg-invest-display" placeholder="mm/dd/yyyy" autocomplete="off" inputmode="numeric">
+          <input type="text" class="date-display" id="cfg-invest-display" placeholder="mm/dd/yyyy" autocomplete="off" inputmode="numeric" readonly>
           <svg class="date-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
         </div>
         <div class="date-popover hidden"></div>
@@ -1804,10 +1822,6 @@ function initDatePicker(hiddenId, displayId) {
   const field = display.closest('[data-datefield]');
   const popover = field.querySelector('.date-popover');
 
-  // Move the popover out to <body> ("portal" it) so it isn't trapped inside
-  // this card's stacking context — otherwise a later sibling card can paint
-  // on top of it even with a higher z-index, since z-index only wins within
-  // the same stacking context.
   popover.classList.add('date-popover-portal');
   document.body.appendChild(popover);
 
@@ -1818,8 +1832,8 @@ function initDatePicker(hiddenId, displayId) {
     popover.style.left = `${rect.left}px`;
   }
 
-  let viewDate = new Date(); // month currently shown in the popover
-  let selected = null;       // Date object of the selected day, or null
+  let viewDate = new Date();
+  let selected = null;
 
   function isoOf(d) {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -1835,41 +1849,53 @@ function initDatePicker(hiddenId, displayId) {
   function sameDay(a, b) {
     return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
+  function parseDisplayDate(value) {
+    const match = String(value || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) return null;
+    const [, mo, da, yr] = match;
+    const date = new Date(Number(yr), Number(mo) - 1, Number(da));
+    if (date.getFullYear() !== Number(yr) || date.getMonth() !== Number(mo) - 1 || date.getDate() !== Number(da)) {
+      return null;
+    }
+    return date;
+  }
 
   function render() {
     const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstOfMonth = new Date(year, month, 1);
-    const startWeekday = firstOfMonth.getDay(); // 0=Sun
+    const startWeekday = firstOfMonth.getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
     const today = new Date();
 
     let cells = '';
-    // Leading days from previous month
     for (let i = startWeekday - 1; i >= 0; i--) {
       const dayNum = daysInPrevMonth - i;
       cells += `<button type="button" class="date-pop-day muted" data-nav="prev" data-day="${dayNum}">${dayNum}</button>`;
     }
-    // Days of current month
-    for (let d = 1; d <= daysInMonth; d++) {
-      const cellDate = new Date(year, month, d);
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(year, month, day);
       const classes = ['date-pop-day'];
       if (sameDay(cellDate, today)) classes.push('today');
       if (sameDay(cellDate, selected)) classes.push('selected');
-      cells += `<button type="button" class="${classes.join(' ')}" data-day="${d}">${d}</button>`;
+      cells += `<button type="button" class="${classes.join(' ')}" data-day="${day}">${day}</button>`;
     }
-    // Trailing days from next month to fill the grid
     const totalCells = startWeekday + daysInMonth;
-    const trailing = (7 - (totalCells % 7)) % 7;
-    for (let d = 1; d <= trailing; d++) {
-      cells += `<button type="button" class="date-pop-day muted" data-nav="next" data-day="${d}">${d}</button>`;
+    const trailingDays = (7 - (totalCells % 7)) % 7;
+    for (let day = 1; day <= trailingDays; day++) {
+      cells += `<button type="button" class="date-pop-day muted" data-nav="next" data-day="${day}">${day}</button>`;
     }
 
     popover.innerHTML = `
       <div class="date-pop-header">
-        <span class="date-pop-title">${monthNames[month]} ${year}</span>
+        <div class="date-pop-title-row">
+          <select class="date-pop-month" aria-label="Month">
+            ${monthNames.map((name, idx) => `<option value="${idx}" ${idx === month ? 'selected' : ''}>${name}</option>`).join('')}
+          </select>
+          <input type="number" class="date-pop-year" min="1900" max="9999" value="${year}" aria-label="Year">
+        </div>
         <div class="date-pop-nav">
           <button type="button" data-act="prev-year" aria-label="Previous year" title="Previous year">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 17l-6-5 6-5M11 17l-6-5 6-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1897,11 +1923,20 @@ function initDatePicker(hiddenId, displayId) {
   }
 
   function open() {
-    viewDate = selected ? new Date(selected.getFullYear(), selected.getMonth(), 1) : new Date();
+    const parsedDate = parseDisplayDate(display.value);
+    if (parsedDate) {
+      selected = parsedDate;
+      viewDate = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1);
+    } else if (selected) {
+      viewDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+    } else {
+      viewDate = new Date();
+    }
     render();
     positionPopover();
     popover.classList.remove('hidden');
   }
+
   function close() {
     popover.classList.add('hidden');
   }
@@ -1915,21 +1950,39 @@ function initDatePicker(hiddenId, displayId) {
   window.addEventListener('scroll', () => { if (!popover.classList.contains('hidden')) positionPopover(); }, true);
   window.addEventListener('resize', () => { if (!popover.classList.contains('hidden')) positionPopover(); });
 
-  // Manual typing support: parse mm/dd/yyyy as the user types/blurs
-  display.addEventListener('blur', () => {
-    const m = display.value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (m) {
-      const [, mo, da, yr] = m;
-      const d = new Date(Number(yr), Number(mo) - 1, Number(da));
-      if (d.getMonth() === Number(mo) - 1 && d.getDate() === Number(da)) {
-        setSelected(d);
-        return;
-      }
+  display.addEventListener('input', () => {
+    const parsed = parseDisplayDate(display.value);
+    if (parsed) {
+      setSelected(parsed);
+      viewDate = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+      render();
     }
-    if (display.value.trim() === '') setSelected(null);
-    else display.value = selected ? mdyOf(selected) : '';
   });
 
+  display.addEventListener('blur', () => {
+    const parsed = parseDisplayDate(display.value);
+    if (parsed) {
+      setSelected(parsed);
+      return;
+    }
+    if (display.value.trim() === '') {
+      setSelected(null);
+      return;
+    }
+    display.value = selected ? mdyOf(selected) : '';
+  });
+
+  popover.addEventListener('input', (event) => {
+    if (event.target.matches('.date-pop-year')) {
+      const year = parseInt(event.target.value, 10);
+      if (year >= 1900 && year <= 9999) {
+        viewDate.setFullYear(year);
+        render();
+      }
+    }
+  });
+
+<<<<<<< HEAD
   popover.addEventListener('click', (e) => {
     // Stop this click from bubbling to the document-level "click outside
     // closes it" listener below. Without this, render() rebuilding the
@@ -1951,11 +2004,65 @@ function initDatePicker(hiddenId, displayId) {
       if (btn.dataset.nav === 'next') { viewDate.setMonth(viewDate.getMonth() + 1); setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), Number(btn.dataset.day))); close(); return; }
       setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), Number(btn.dataset.day)));
       close();
+=======
+  popover.addEventListener('change', (event) => {
+    if (event.target.matches('.date-pop-month')) {
+      const month = parseInt(event.target.value, 10);
+      if (!Number.isNaN(month) && month >= 0 && month <= 11) {
+        viewDate.setMonth(month);
+        render();
+      }
+>>>>>>> 60f897b (added a new page to help compare the previous month to the current mont)
     }
   });
 
-  document.addEventListener('click', (e) => {
-    if (!field.contains(e.target) && !popover.contains(e.target)) close();
+  popover.addEventListener('click', (event) => {
+    const btn = event.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.act === 'prev-month') {
+      viewDate.setMonth(viewDate.getMonth() - 1);
+      render();
+      return;
+    }
+    if (btn.dataset.act === 'next-month') {
+      viewDate.setMonth(viewDate.getMonth() + 1);
+      render();
+      return;
+    }
+    if (btn.dataset.act === 'clear') {
+      setSelected(null);
+      close();
+      return;
+    }
+    if (btn.dataset.act === 'today') {
+      const today = new Date();
+      setSelected(today);
+      viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      render();
+      close();
+      return;
+    }
+    if (!btn.dataset.day) return;
+
+    const day = Number(btn.dataset.day);
+    if (btn.dataset.nav === 'prev') {
+      viewDate.setMonth(viewDate.getMonth() - 1);
+      setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
+      close();
+      return;
+    }
+    if (btn.dataset.nav === 'next') {
+      viewDate.setMonth(viewDate.getMonth() + 1);
+      setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
+      close();
+      return;
+    }
+    setSelected(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
+    close();
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!field.contains(event.target) && !popover.contains(event.target)) close();
   });
 }
 
